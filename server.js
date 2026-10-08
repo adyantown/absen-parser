@@ -92,7 +92,7 @@ function extractTaskDescription(block, header) {
         .replace(new RegExp(escapeRegExp(header.nama), 'i'), '')
         .replace(new RegExp(escapeRegExp(header.nip), 'g'), '')
         .replace(/\d{2}:\d{2}:\d{2}\s+[A-Z]{2,4}/g, ' ')
-        .replace(/\b(?:SABTU|MINGGU|TIDAK\s+CEK\s+(?:OUT|MASUK)|TIDAK\s+MELAKUKAN\s+ABSENSI|ALPA)\b/gi, ' ')
+        .replace(/\b(?:SABTU|MINGGU|CUTI|SAKIT|IZIN|TIDAK\s+CEK\s+(?:OUT|MASUK)|TIDAK\s+MELAKUKAN\s+ABSENSI|ALPA)\b/gi, ' ')
         .replace(/\s+\d{1,2}\s*$/, '')
         .replace(/[.\s]+$/, '')
         .replace(/\s+/g, ' ')
@@ -153,14 +153,15 @@ async function parseAbsensiPdf(buffer, filename = '') {
         const isLibur = isWeekend || isStandaloneWeekendText || isNationalHoliday;
 
         // Anomaly & Status keywords
-        const isCuti = /CUTI/i.test(block);
-        const isIzin = /IZIN/i.test(block);
         const isTidakAbsenKeyword = /TIDAK\s+MELAKUKAN\s+ABSENSI|ALPA/i.test(block);
         const isTidakCekOut = /TIDAK\s+CEK\s+OUT/i.test(block);
         const isTidakCekMasuk = /TIDAK\s+CEK\s+MASUK/i.test(block);
 
         // Parse check-in and check-out times
         const timeMatches = [...block.matchAll(/(\d{2}:\d{2}:\d{2})\s+([A-Z]{2,4})/g)];
+        const isCuti = timeMatches.length === 0 && /\bCUTI\b/i.test(block);
+        const isSakit = timeMatches.length === 0 && /\bSAKIT\b/i.test(block);
+        const isIzin = timeMatches.length === 0 && /\bIZIN\b/i.test(block);
         const hasDlAttendanceCode = timeMatches.some(([, , code]) => code === 'DL');
         const isDL = hasDlAttendanceCode || (timeMatches.length === 0 && /DINAS\s+LUAR|\bDL\b/i.test(block));
 
@@ -218,6 +219,10 @@ async function parseAbsensiPdf(buffer, filename = '') {
             statusBadge = 'secondary';
         } else if (isCuti) {
             status = 'Cuti';
+            statusBadge = 'info';
+            isExcused = true;
+        } else if (isSakit) {
+            status = 'Sakit';
             statusBadge = 'info';
             isExcused = true;
         } else if (isIzin) {
@@ -278,8 +283,8 @@ async function parseAbsensiPdf(buffer, filename = '') {
                 isAnomaly = true;
             }
 
-            // Evaluasi Jam Pulang
-            if (outSec >= minOutSec || isOutDL) {
+            // Evaluasi jam pulang minimum dan target durasi kerja efektif.
+            if ((outSec >= minOutSec || isOutDL) && netSec >= targetSec) {
                 status = 'Hadir Utuh';
                 statusBadge = 'success';
             } else {
@@ -295,6 +300,8 @@ async function parseAbsensiPdf(buffer, filename = '') {
             dayOfWeek,
             isWeekend: isLibur,
             isExcused,
+            isCuti,
+            isSakit,
             isDL,
             isAnomaly,
             isShortDuration,
@@ -325,6 +332,8 @@ async function parseAbsensiPdf(buffer, filename = '') {
     const hadirUtuhCount = workingDays.filter(r => r.status === 'Hadir Utuh').length;
     const jamKurangCount = workingDays.filter(r => r.status === 'Jam Kerja Kurang').length;
     const tidakMelakukanAbsensiCount = workingDays.filter(r => r.status === 'Tidak Melakukan Absensi').length;
+    const cutiCount = workingDays.filter(r => r.status === 'Cuti').length;
+    const sakitCount = workingDays.filter(r => r.status === 'Sakit').length;
     const tidakCekOutMasukCount = workingDays.filter(r => r.status === 'Tidak Cek Out' || r.status === 'Tidak Cek Masuk').length;
     const izinCutiDlCount = workingDays.filter(r => r.isExcused || r.isDL).length;
     const lateDaysCount = workingDays.filter(r => r.isLate).length;
@@ -345,6 +354,8 @@ async function parseAbsensiPdf(buffer, filename = '') {
         hadirUtuhCount,
         jamKurangCount,
         tidakMelakukanAbsensiCount,
+        cutiCount,
+        sakitCount,
         tidakCekOutMasukCount,
         izinCutiDlCount,
         lateDaysCount,

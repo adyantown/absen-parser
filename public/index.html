@@ -51,7 +51,7 @@
                         </div>
                         <div class="upload-rules">
                             <span><i class="fa-solid fa-circle-check"></i> Dukungan Batch Upload (34+ File Sekaligus)</span>
-                            <span><i class="fa-solid fa-circle-check"></i> Deteksi Anomali: Tidak Cek Out/Masuk, DL, Cuti/Izin, Terlambat & Alpa</span>
+                            <span><i class="fa-solid fa-circle-check"></i> Deteksi Status: Tidak Cek Out/Masuk, DL, Cuti, Sakit, Izin, Terlambat & Alpa</span>
                         </div>
                     </div>
                 </div>
@@ -182,9 +182,11 @@
                         <button class="tab-btn" data-filter="Hadir Utuh"><i class="fa-solid fa-circle-check text-green"></i> Hadir Utuh (<span id="countHadir">0</span>)</button>
                         <button class="tab-btn" data-filter="Jam Kerja Kurang"><i class="fa-solid fa-circle-xmark text-red"></i> Jam Kerja Kurang (<span id="countKurang">0</span>)</button>
                         <button class="tab-btn" data-filter="Tidak Melakukan Absensi"><i class="fa-solid fa-user-xmark text-dark-red"></i> Alpa (<span id="countTidakAbsen">0</span>)</button>
+                        <button class="tab-btn" data-filter="Cuti"><i class="fa-solid fa-calendar-check text-purple"></i> Cuti (<span id="countCuti">0</span>)</button>
+                        <button class="tab-btn" data-filter="Sakit"><i class="fa-solid fa-heart-pulse text-purple"></i> Sakit (<span id="countSakit">0</span>)</button>
                         <button class="tab-btn" data-filter="Tidak Cek Out/Masuk"><i class="fa-solid fa-circle-exclamation text-amber"></i> Tidak Cek Out/Masuk (<span id="countNoCheckout">0</span>)</button>
                         <button class="tab-btn" data-filter="Terlambat"><i class="fa-solid fa-clock text-amber"></i> Terlambat (<span id="countLate">0</span>)</button>
-                        <button class="tab-btn" data-filter="Izin/Cuti/DL"><i class="fa-solid fa-file-lines text-purple"></i> Izin/Cuti/DL (<span id="countExcused">0</span>)</button>
+                        <button class="tab-btn" data-filter="Izin/Cuti/Sakit/DL"><i class="fa-solid fa-file-lines text-purple"></i> Izin/Cuti/Sakit/DL (<span id="countExcused">0</span>)</button>
                         <button class="tab-btn" data-filter="Libur"><i class="fa-solid fa-mug-hot text-slate"></i> Akhir Pekan (<span id="countWeekend">0</span>)</button>
                     </div>
 

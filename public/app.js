@@ -47,6 +47,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const countHadir = document.getElementById('countHadir');
     const countKurang = document.getElementById('countKurang');
     const countTidakAbsen = document.getElementById('countTidakAbsen');
+    const countCuti = document.getElementById('countCuti');
+    const countSakit = document.getElementById('countSakit');
     const countNoCheckout = document.getElementById('countNoCheckout');
     const countLate = document.getElementById('countLate');
     const countExcused = document.getElementById('countExcused');
@@ -283,6 +285,8 @@ document.addEventListener('DOMContentLoaded', () => {
         countHadir.textContent = summary.hadirUtuhCount;
         countKurang.textContent = summary.jamKurangCount;
         countTidakAbsen.textContent = summary.tidakMelakukanAbsensiCount;
+        countCuti.textContent = summary.cutiCount || 0;
+        countSakit.textContent = summary.sakitCount || 0;
         countNoCheckout.textContent = summary.tidakCekOutMasukCount || 0;
         countLate.textContent = summary.lateDaysCount;
         countExcused.textContent = summary.izinCutiDlCount;
@@ -314,9 +318,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 <th>Hadir Utuh</th>
                 <th>Jam Kurang</th>
                 <th>Tidak Absen</th>
+                <th>Cuti</th>
+                <th>Sakit</th>
                 <th>Tdk Cek Out/Msk</th>
                 <th>Terlambat</th>
-                <th>Izin/Cuti/DL</th>
+                <th>Izin/Cuti/Sakit/DL</th>
                 <th>Akumulasi Selisih</th>
                 <th class="text-center">Detail</th>
             </tr>
@@ -331,9 +337,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (activeFilter === 'Hadir Utuh' && r.status !== 'Hadir Utuh') return false;
             if (activeFilter === 'Jam Kerja Kurang' && r.status !== 'Jam Kerja Kurang') return false;
             if (activeFilter === 'Tidak Melakukan Absensi' && r.status !== 'Tidak Melakukan Absensi') return false;
+            if (activeFilter === 'Cuti' && r.status !== 'Cuti') return false;
+            if (activeFilter === 'Sakit' && r.status !== 'Sakit') return false;
             if (activeFilter === 'Tidak Cek Out/Masuk' && (r.status !== 'Tidak Cek Out' && r.status !== 'Tidak Cek Masuk')) return false;
             if (activeFilter === 'Terlambat' && !r.isLate) return false;
-            if (activeFilter === 'Izin/Cuti/DL' && !r.isExcused && !r.isDL) return false;
+            if (activeFilter === 'Izin/Cuti/Sakit/DL' && !r.isExcused && !r.isDL) return false;
             if (activeFilter === 'Libur' && !r.isWeekend) return false;
 
             if (searchQuery.trim() !== '') {
@@ -427,7 +435,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (filtered.length === 0) {
             attendanceTableBody.innerHTML = `
                 <tr>
-                    <td colspan="11" class="text-center" style="padding: 32px; color: var(--text-muted);">
+                    <td colspan="13" class="text-center" style="padding: 32px; color: var(--text-muted);">
                         Tidak ada data pegawai yang sesuai.
                     </td>
                 </tr>
@@ -446,6 +454,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td><span class="badge badge-success">${sum.hadirUtuhCount || 0}</span></td>
                 <td><span class="badge badge-danger">${sum.jamKurangCount || 0}</span></td>
                 <td><span class="badge badge-dark-red">${sum.tidakMelakukanAbsensiCount || 0}</span></td>
+                <td><span class="badge badge-info">${sum.cutiCount || 0}</span></td>
+                <td><span class="badge badge-info">${sum.sakitCount || 0}</span></td>
                 <td><span class="badge badge-warning">${sum.tidakCekOutMasukCount || 0}</span></td>
                 <td><span class="badge badge-warning">${sum.lateDaysCount || 0}</span></td>
                 <td><span class="badge badge-info">${sum.izinCutiDlCount || 0}</span></td>
@@ -635,10 +645,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (allParsedData.length === 0) return;
 
         if (viewMode === 'batch_rekap') {
-            let csv = 'Nama Pegawai,NIP,Bulan,Tahun,Hari Kerja,Hadir Utuh,Jam Kurang,Tidak Absen,Tidak Cek Out/Masuk,Terlambat,Izin Cuti DL,Selisih Jam Kerja\n';
+            let csv = 'Nama Pegawai,NIP,Bulan,Tahun,Hari Kerja,Hadir Utuh,Jam Kurang,Alpa,Cuti,Sakit,Tidak Cek Out/Masuk,Terlambat,Izin Cuti Sakit DL,Selisih Jam Kerja\n';
             allParsedData.forEach(d => {
                 const s = d.summary || {};
-                csv += `"${d.header.nama}","${d.header.nip}","${d.header.bulan}","${d.header.tahun}","${s.totalWorkingDays || 0}","${s.hadirUtuhCount || 0}","${s.jamKurangCount || 0}","${s.tidakMelakukanAbsensiCount || 0}","${s.tidakCekOutMasukCount || 0}","${s.lateDaysCount || 0}","${s.izinCutiDlCount || 0}","${s.totalDiffFormatted || '0s'}"\n`;
+                csv += `"${d.header.nama}","${d.header.nip}","${d.header.bulan}","${d.header.tahun}","${s.totalWorkingDays || 0}","${s.hadirUtuhCount || 0}","${s.jamKurangCount || 0}","${s.tidakMelakukanAbsensiCount || 0}","${s.cutiCount || 0}","${s.sakitCount || 0}","${s.tidakCekOutMasukCount || 0}","${s.lateDaysCount || 0}","${s.izinCutiDlCount || 0}","${s.totalDiffFormatted || '0s'}"\n`;
             });
             downloadCsv(csv, `Rekapitulasi_Batch_Absensi_Pegawai.csv`);
         } else {
