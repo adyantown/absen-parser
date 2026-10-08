@@ -320,7 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <tr>
                 <th>Pegawai</th>
                 <th>Hari Kerja</th>
-                <th>Hadir Utuh</th>
+                <th>Hadir Penuh</th>
                 <th>Jam Kurang</th>
                 <th>Tidak Absen</th>
                 <th>Cuti</th>
@@ -338,7 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
         attendanceTableBody.innerHTML = '';
 
         const filtered = records.filter(r => {
-            if (activeFilter === 'Hadir Utuh' && r.status !== 'Hadir Utuh') return false;
+            if (activeFilter === 'Hadir Penuh' && r.status !== 'Hadir Penuh') return false;
             if (activeFilter === 'Jam Kerja Kurang' && r.status !== 'Jam Kerja Kurang') return false;
             if (activeFilter === 'Tidak Melakukan Absensi' && r.status !== 'Tidak Melakukan Absensi') return false;
             if (activeFilter === 'Cuti' && r.status !== 'Cuti') return false;
@@ -465,7 +465,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </td>
                 <td data-label="Hari Kerja">${sum.totalWorkingDays || 0}</td>
-                <td data-label="Hadir Utuh"><span class="badge badge-success">${sum.hadirUtuhCount || 0}</span></td>
+                <td data-label="Hadir Penuh"><span class="badge badge-success">${sum.hadirUtuhCount || 0}</span></td>
                 <td data-label="Jam Kurang"><span class="badge badge-danger">${sum.jamKurangCount || 0}</span></td>
                 <td data-label="Alpa"><span class="badge badge-dark-red">${sum.tidakMelakukanAbsensiCount || 0}</span></td>
                 <td data-label="Cuti"><span class="badge badge-info">${sum.cutiCount || 0}</span></td>
@@ -656,7 +656,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (allParsedData.length === 0) return;
 
         if (viewMode === 'batch_rekap') {
-            let csv = 'Nama Pegawai,NIP,Bulan,Tahun,Hari Kerja,Hadir Utuh,Jam Kurang,Alpa,Cuti,Sakit,Tidak Cek Out/Masuk,Terlambat,Izin DL,Selisih Jam Kerja\n';
+            let csv = 'Nama Pegawai,NIP,Bulan,Tahun,Hari Kerja,Hadir Penuh,Jam Kurang,Alpa,Cuti,Sakit,Tidak Cek Out/Masuk,Terlambat,Izin DL,Selisih Jam Kerja\n';
             allParsedData.forEach(d => {
                 const s = d.summary || {};
                 csv += `"${d.header.nama}","${d.header.nip}","${d.header.bulan}","${d.header.tahun}","${s.totalWorkingDays || 0}","${s.hadirUtuhCount || 0}","${s.jamKurangCount || 0}","${s.tidakMelakukanAbsensiCount || 0}","${s.cutiCount || 0}","${s.sakitCount || 0}","${s.tidakCekOutMasukCount || 0}","${s.lateDaysCount || 0}","${s.izinDlCount || 0}","${s.totalDiffFormatted || '0s'}"\n`;

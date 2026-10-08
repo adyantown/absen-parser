@@ -287,7 +287,7 @@ async function parseAbsensiPdf(buffer, filename = '') {
 
             // Evaluasi jam pulang minimum dan target durasi kerja efektif.
             if ((outSec >= minOutSec || isOutDL) && netSec >= targetSec) {
-                status = 'Hadir Utuh';
+                status = 'Hadir Penuh';
                 statusBadge = 'success';
             } else {
                 status = 'Jam Kerja Kurang';
@@ -331,7 +331,7 @@ async function parseAbsensiPdf(buffer, filename = '') {
 
     // Summary Statistics
     const workingDays = records.filter((r) => !r.isWeekend);
-    const hadirUtuhCount = workingDays.filter((r) => r.status === 'Hadir Utuh').length;
+    const hadirUtuhCount = workingDays.filter((r) => r.status === 'Hadir Penuh').length;
     const jamKurangCount = workingDays.filter((r) => r.status === 'Jam Kerja Kurang').length;
     const tidakMelakukanAbsensiCount = workingDays.filter((r) => r.status === 'Tidak Melakukan Absensi').length;
     const cutiCount = workingDays.filter((r) => r.status === 'Cuti').length;

@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Absensi Parser & Working Hours Calculator - KPU</title>
+    <link rel="icon" type="image/png" href="kpu_logo.png">
+    <link rel="apple-touch-icon" href="kpu_logo.png">
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,9 +25,7 @@
         <!-- Header -->
         <header class="app-header">
             <div class="header-brand">
-                <div class="logo-icon">
-                    <i class="fa-solid fa-clock-rotate-left"></i>
-                </div>
+                <img class="logo-icon" src="kpu_logo.png" alt="Logo KPU">
                 <div class="brand-text">
                     <h1>Absensi & Jam Kerja Calculator</h1>
                     <p>Sistem Ekstraksi PDF Laporan Absensi & Evaluasi Jam Kerja Pegawai KPU</p>
@@ -119,7 +119,7 @@
                             <i class="fa-solid fa-user-check"></i>
                         </div>
                         <div class="kpi-details">
-                            <span class="kpi-label">Hadir Utuh</span>
+                            <span class="kpi-label">Hadir Penuh</span>
                             <h3 id="kpiHadirUtuh">0</h3>
                             <span class="kpi-sub" id="kpiHadirUtuhPct">0% dari hari kerja</span>
                         </div>
@@ -163,7 +163,7 @@
                             <i class="fa-solid fa-business-time"></i>
                         </div>
                         <div class="kpi-details">
-                            <span class="kpi-label">Jumlah Pegawai Ditampilkan</span>
+                            <span class="kpi-label">Akumulasi Pegawai/Selisih Jam Kerja</span>
                             <h3 id="kpiTotalDiff">+0m</h3>
                             <span class="kpi-sub" id="kpiTotalDiffStatus">Memenuhi target jam
                                 kerja</span>
@@ -194,8 +194,8 @@
                     <div class="filter-tabs" id="filterTabsContainer">
                         <button class="tab-btn active" data-filter="all">Semua (<span
                                 id="countAll">0</span>)</button>
-                        <button class="tab-btn" data-filter="Hadir Utuh"><i
-                                class="fa-solid fa-circle-check text-green"></i> Hadir Utuh (<span
+                        <button class="tab-btn" data-filter="Hadir Penuh"><i
+                                class="fa-solid fa-circle-check text-green"></i> Hadir Penuh (<span
                                 id="countHadir">0</span>)</button>
                         <button class="tab-btn" data-filter="Jam Kerja Kurang"><i
                                 class="fa-solid fa-circle-xmark text-red"></i> Jam Kerja Kurang
@@ -265,7 +265,8 @@
 
         <!-- Footer -->
         <footer class="app-footer">
-            <p>&copy; 2026 Absensi Parser Engine &bull; KPU Kabupaten Tulang Bawang Barat</p>
+            <p>&copy; 2026 Absensi Parser Engine by Ady Nugroho &bull; KPU Kabupaten Tulang Bawang
+                Barat</p>
         </footer>
     </div>
 
