@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Absensi Parser & Working Hours Calculator - KPU</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-brand">
+                <div class="logo-icon">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                </div>
+                <div class="brand-text">
+                    <h1>Absensi & Jam Kerja Calculator</h1>
+                    <p>Sistem Ekstraksi PDF Laporan Absensi & Evaluasi Jam Kerja Pegawai KPU</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button id="btnNewUpload" class="btn btn-secondary hidden">
+                    <i class="fa-solid fa-file-arrow-up"></i> Upload PDF Baru / Batch
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+
+            <!-- Dropzone Section -->
+            <section id="uploadSection" class="upload-section">
+                <div class="dropzone-card" id="dropzone">
+                    <input type="file" id="fileInput" accept=".pdf" multiple class="file-input">
+                    <div class="dropzone-content">
+                        <div class="upload-icon-pulse">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                        </div>
+                        <h2>Tarik & Lepas File PDF Laporan Absensi</h2>
+                        <p class="dropzone-sub">atau <span class="browse-link">klik di sini</span> untuk memilih satu atau banyak file PDF sekaligus (Batch Upload)</p>
+                        <div class="file-info-badge" id="selectedFileInfo" style="display: none;">
+                            <i class="fa-solid fa-file-pdf"></i> <span id="fileName">file.pdf</span>
+                        </div>
+                        <div class="upload-rules">
+                            <span><i class="fa-solid fa-circle-check"></i> Dukungan Batch Upload (34+ File Sekaligus)</span>
+                            <span><i class="fa-solid fa-circle-check"></i> Deteksi Anomali: Tidak Cek Out/Masuk, DL, Cuti/Izin, Terlambat & Alpa</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="loadingSpinner" class="loading-card hidden">
+                    <div class="spinner"></div>
+                    <p id="loadingText">Mengekstrak data PDF & menghitung jam kerja...</p>
+                </div>
+            </section>
+
+            <!-- Results Dashboard Section (Hidden by default) -->
+            <section id="resultsSection" class="results-section hidden">
+
+                <!-- Batch Selector Bar (Visible if multiple files uploaded) -->
+                <div id="batchSelectorBar" class="batch-selector-bar hidden">
+                    <label for="employeeSelect">
+                        <i class="fa-solid fa-users text-red"></i> Pilih Pegawai (Batch Result):
+                    </label>
+                    <select id="employeeSelect" class="employee-select">
+                        <option value="summary_all">-- Rekapitulasi Semua Pegawai --</option>
+                    </select>
+                </div>
+
+                <!-- Profile Info Card -->
+                <div class="profile-card glass-panel" id="profileCard">
+                    <div class="profile-avatar">
+                        <i class="fa-solid fa-id-card"></i>
+                    </div>
+                    <div class="profile-info">
+                        <h2 id="empNama">NAMA PEGAWAI</h2>
+                        <div class="profile-meta">
+                            <span><i class="fa-solid fa-hashtag"></i> NIP: <strong id="empNip">-</strong></span>
+                            <span><i class="fa-solid fa-calendar-days"></i> Periode: <strong id="empPeriode">-</strong></span>
+                            <span><i class="fa-solid fa-building"></i> Instansi: <strong id="empInstansi">-</strong></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary KPI Grid -->
+                <div class="kpi-grid">
+                    <div class="kpi-card glass-panel">
+                        <div class="kpi-icon blue">
+                            <i class="fa-solid fa-calendar-check"></i>
+                        </div>
+                        <div class="kpi-details">
+                            <span class="kpi-label">Hari Kerja Efektif</span>
+                            <h3 id="kpiWorkingDays">0</h3>
+                            <span class="kpi-sub">Total hari kerja di bulan ini</span>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card glass-panel">
+                        <div class="kpi-icon green">
+                            <i class="fa-solid fa-user-check"></i>
+                        </div>
+                        <div class="kpi-details">
+                            <span class="kpi-label">Hadir Utuh</span>
+                            <h3 id="kpiHadirUtuh">0</h3>
+                            <span class="kpi-sub" id="kpiHadirUtuhPct">0% dari hari kerja</span>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card glass-panel">
+                        <div class="kpi-icon red">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                        <div class="kpi-details">
+                            <span class="kpi-label">Jam Kerja Kurang</span>
+                            <h3 id="kpiJamKurang">0</h3>
+                            <span class="kpi-sub" id="kpiJamKurangPct">0% dari hari kerja</span>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card glass-panel">
+                        <div class="kpi-icon dark-red">
+                            <i class="fa-solid fa-user-xmark"></i>
+                        </div>
+                        <div class="kpi-details">
+                            <span class="kpi-label">Tidak Absen / Alpa</span>
+                            <h3 id="kpiTidakAbsen">0</h3>
+                            <span class="kpi-sub">Tanpa keterangan / jam kerja</span>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card glass-panel">
+                        <div class="kpi-icon amber">
+                            <i class="fa-solid fa-user-clock"></i>
+                        </div>
+                        <div class="kpi-details">
+                            <span class="kpi-label">Total Terlambat</span>
+                            <h3 id="kpiTotalLateDays">0 Hari</h3>
+                            <span class="kpi-sub" id="kpiTotalLateMinutes">0 menit</span>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card glass-panel highlight-kpi">
+                        <div class="kpi-icon purple">
+                            <i class="fa-solid fa-business-time"></i>
+                        </div>
+                        <div class="kpi-details">
+                            <span class="kpi-label">Akumulasi Selisih Jam Kerja</span>
+                            <h3 id="kpiTotalDiff">+0m</h3>
+                            <span class="kpi-sub" id="kpiTotalDiffStatus">Memenuhi target jam kerja</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table & Controls Section -->
+                <div class="table-container-panel glass-panel">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <h3 id="tableTitle"><i class="fa-solid fa-list-check"></i> Detail Absensi & Pemenuhan Jam Kerja</h3>
+                        </div>
+                        <div class="panel-actions">
+                            <div class="search-box">
+                                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                                <input type="text" id="searchInput" placeholder="Cari tanggal, hari, status...">
+                            </div>
+                            <button id="btnExportCsv" class="btn btn-outline">
+                                <i class="fa-solid fa-file-csv"></i> Export CSV
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Filter Tabs -->
+                    <div class="filter-tabs" id="filterTabsContainer">
+                        <button class="tab-btn active" data-filter="all">Semua (<span id="countAll">0</span>)</button>
+                        <button class="tab-btn" data-filter="Hadir Utuh"><i class="fa-solid fa-circle-check text-green"></i> Hadir Utuh (<span id="countHadir">0</span>)</button>
+                        <button class="tab-btn" data-filter="Jam Kerja Kurang"><i class="fa-solid fa-circle-xmark text-red"></i> Jam Kerja Kurang (<span id="countKurang">0</span>)</button>
+                        <button class="tab-btn" data-filter="Tidak Melakukan Absensi"><i class="fa-solid fa-user-xmark text-dark-red"></i> Alpa (<span id="countTidakAbsen">0</span>)</button>
+                        <button class="tab-btn" data-filter="Tidak Cek Out/Masuk"><i class="fa-solid fa-circle-exclamation text-amber"></i> Tidak Cek Out/Masuk (<span id="countNoCheckout">0</span>)</button>
+                        <button class="tab-btn" data-filter="Terlambat"><i class="fa-solid fa-clock text-amber"></i> Terlambat (<span id="countLate">0</span>)</button>
+                        <button class="tab-btn" data-filter="Izin/Cuti/DL"><i class="fa-solid fa-file-lines text-purple"></i> Izin/Cuti/DL (<span id="countExcused">0</span>)</button>
+                        <button class="tab-btn" data-filter="Libur"><i class="fa-solid fa-mug-hot text-slate"></i> Akhir Pekan (<span id="countWeekend">0</span>)</button>
+                    </div>
+
+                    <!-- Data Table -->
+                    <div class="table-responsive">
+                        <table class="data-table" id="mainDataTable">
+                            <thead id="tableHead">
+                                <tr>
+                                    <th>Tanggal & Hari</th>
+                                    <th>Jam Masuk</th>
+                                    <th>Jam Pulang</th>
+                                    <th>Status Keterlambatan</th>
+                                    <th>Pulang Wajib Min.</th>
+                                    <th>Net Durasi Kerja</th>
+                                    <th>Status Kehadiran</th>
+                                    <th class="text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="attendanceTableBody">
+                                <!-- Dynamic Rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </section>
+        </main>
+
+        <!-- Detail Calculation Modal -->
+        <div id="detailModal" class="modal hidden">
+            <div class="modal-content glass-panel">
+                <div class="modal-header">
+                    <h3 id="modalTitle"><i class="fa-solid fa-calculator"></i> Detail Perhitungan Jam Kerja</h3>
+                    <button id="btnCloseModal" class="modal-close"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="modal-body" id="modalBody">
+                    <!-- Dynamic Detail Content -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>&copy; 2026 Absensi Parser Engine &bull; KPU Kabupaten Tulang Bawang Barat</p>
+        </footer>
+    </div>
+
+    <!-- Custom JS -->
+    <script src="app.js"></script>
+</body>
+</html>
