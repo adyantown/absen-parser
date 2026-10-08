@@ -82,6 +82,23 @@ function getBreakOverlap(inSec, outSec, breakStartSec, breakEndSec) {
     return Math.max(0, end - start);
 }
 
+function escapeRegExp(value) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function extractTaskDescription(block, header) {
+    return block
+        .replace(/^\s*\d+\s*/, '')
+        .replace(new RegExp(escapeRegExp(header.nama), 'i'), '')
+        .replace(new RegExp(escapeRegExp(header.nip), 'g'), '')
+        .replace(/\d{2}:\d{2}:\d{2}\s+[A-Z]{2,4}/g, ' ')
+        .replace(/\b(?:SABTU|MINGGU|TIDAK\s+CEK\s+(?:OUT|MASUK)|TIDAK\s+MELAKUKAN\s+ABSENSI|ALPA)\b/gi, ' ')
+        .replace(/\s+\d{1,2}\s*$/, '')
+        .replace(/[.\s]+$/, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
 // Comprehensive PDF Parser & Business Rules Engine
 async function parseAbsensiPdf(buffer, filename = '') {
     const parser = new PDFParse(new Uint8Array(buffer));
@@ -274,6 +291,7 @@ async function parseAbsensiPdf(buffer, filename = '') {
         records.push({
             tanggal: dateStr,
             hari: dayName,
+            uraianTugas: extractTaskDescription(block, header),
             dayOfWeek,
             isWeekend: isLibur,
             isExcused,
@@ -345,6 +363,92 @@ async function parseAbsensiPdf(buffer, filename = '') {
     };
 }
 
+async function extractAttendancePhotos(buffer, dateStr) {
+    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    const parser = new PDFParse(new Uint8Array(buffer));
+    try {
+        const textResult = await parser.getText();
+        const targetPage = textResult.pages.find(page => page.text.includes(dateStr));
+        if (!targetPage) {
+            const error = new Error(`Tanggal ${dateStr} tidak ditemukan pada PDF.`);
+            error.statusCode = 404;
+            throw error;
+        }
+
+        const page = await parser.doc.getPage(targetPage.num);
+        const textContent = await page.getTextContent();
+        const dateItem = textContent.items.find(item => item.str.trim() === dateStr)
+            || textContent.items.find(item => item.str.includes(dateStr));
+        if (!dateItem) {
+            throw new Error(`Posisi tanggal ${dateStr} tidak dapat dibaca dari PDF.`);
+        }
+
+        const imagesResult = await parser.getImage({
+            partial: [targetPage.num],
+            imageThreshold: 200,
+            imageDataUrl: true,
+            imageBuffer: false
+        });
+        const images = imagesResult.pages[0]?.images || [];
+        const operatorList = await page.getOperatorList();
+        const imageOperations = [];
+        const imageOps = new Set([
+            pdfjs.OPS.paintInlineImageXObject,
+            pdfjs.OPS.paintImageXObject
+        ]);
+        const matrixStack = [];
+        let transform = [1, 0, 0, 1, 0, 0];
+
+        for (let index = 0; index < operatorList.fnArray.length; index++) {
+            const operation = operatorList.fnArray[index];
+            if (operation === pdfjs.OPS.save) {
+                matrixStack.push(transform);
+                transform = transform.slice();
+            } else if (operation === pdfjs.OPS.restore) {
+                transform = matrixStack.pop() || [1, 0, 0, 1, 0, 0];
+            } else if (operation === pdfjs.OPS.transform) {
+                transform = pdfjs.Util.transform(transform, operatorList.argsArray[index]);
+            } else if (imageOps.has(operation)) {
+                const [, width, height] = operatorList.argsArray[index];
+                if (width > 200 && height > 200) {
+                    imageOperations.push({
+                        x: transform[0] / 2 + transform[2] / 2 + transform[4],
+                        y: transform[1] / 2 + transform[3] / 2 + transform[5]
+                    });
+                }
+            }
+        }
+
+        if (images.length !== imageOperations.length) {
+            throw new Error('Foto PIC tidak dapat dicocokkan dengan posisi di PDF.');
+        }
+
+        const picColumnSplitX = page.getViewport({ scale: 1 }).width * 0.87;
+        const dayPhotos = images
+            .map((image, index) => ({ ...imageOperations[index], dataUrl: image.dataUrl }))
+            .filter(image => {
+                const closestDate = textContent.items
+                    .filter(item => /^\d{2}-\d{2}-\d{4}$/.test(item.str.trim()))
+                    .reduce((closest, item) => {
+                        const distance = Math.abs(item.transform[5] - image.y);
+                        return distance < closest.distance
+                            ? { date: item.str.trim(), distance }
+                            : closest;
+                    }, { date: '', distance: Infinity });
+                return closestDate.date === dateStr;
+            })
+            .sort((first, second) => first.x - second.x)
+            .map(image => ({
+                label: image.x < picColumnSplitX ? 'Foto PIC Masuk' : 'Foto PIC Pulang',
+                dataUrl: image.dataUrl
+            }));
+
+        return dayPhotos;
+    } finally {
+        await parser.destroy();
+    }
+}
+
 // API Endpoint: PDF Upload & Parse
 app.post('/api/upload', upload.array('pdf', 100), async (req, res) => {
     try {
@@ -378,6 +482,26 @@ app.post('/api/upload', upload.array('pdf', 100), async (req, res) => {
     } catch (err) {
         console.error('Error processing PDF batch:', err);
         return res.status(500).json({ success: false, error: 'Gagal memproses file PDF: ' + err.message });
+    }
+});
+
+app.post('/api/day-photos', upload.single('pdf'), async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ success: false, error: 'File PDF tidak ditemukan.' });
+    }
+    if (!/^\d{2}-\d{2}-\d{4}$/.test(req.body.tanggal || '')) {
+        return res.status(400).json({ success: false, error: 'Format tanggal tidak valid.' });
+    }
+
+    try {
+        const photos = await extractAttendancePhotos(req.file.buffer, req.body.tanggal);
+        return res.json({ success: true, photos });
+    } catch (err) {
+        console.error(`Error extracting photos for ${req.body.tanggal}:`, err);
+        return res.status(err.statusCode || 500).json({
+            success: false,
+            error: err.message || 'Gagal mengambil foto PIC dari PDF.'
+        });
     }
 });
 

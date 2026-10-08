@@ -65,6 +65,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let viewMode = 'single'; // 'single' or 'batch_rekap'
     let activeFilter = 'all';
     let searchQuery = '';
+    let uploadedFiles = [];
+    const attendancePhotoCache = new Map();
 
     // Drag & Drop Handlers
     ['dragenter', 'dragover'].forEach(eventName => {
@@ -106,6 +108,8 @@ document.addEventListener('DOMContentLoaded', () => {
         fileInput.value = '';
         selectedFileInfo.style.display = 'none';
         allParsedData = [];
+        uploadedFiles = [];
+        attendancePhotoCache.clear();
     });
 
     // Handle Upload Call
@@ -136,6 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (result.success) {
                 allParsedData = Array.isArray(result.data) ? result.data : [result.data];
+                uploadedFiles = files;
                 isBatchMode = allParsedData.length > 1;
 
                 setupBatchSelector();
@@ -469,6 +474,14 @@ document.addEventListener('DOMContentLoaded', () => {
         modalTitle.innerHTML = `<i class="fa-solid fa-calculator"></i> Detail Perhitungan (${r.tanggal} - ${r.hari})`;
 
         modalBody.innerHTML = `
+            <section class="detail-section">
+                <h4><i class="fa-solid fa-clipboard-list"></i> Uraian Tugas</h4>
+                <p class="detail-task" id="detailTaskDescription"></p>
+            </section>
+            <section class="detail-section">
+                <h4><i class="fa-solid fa-camera"></i> Foto PIC</h4>
+                <div class="detail-photo-grid" id="detailPhotos" aria-live="polite">Memuat foto PIC...</div>
+            </section>
             <div class="detail-list">
                 <div class="detail-item">
                     <span>Tanggal & Hari:</span>
@@ -517,7 +530,74 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
 
+        const taskDescription = document.getElementById('detailTaskDescription');
+        taskDescription.textContent = r.uraianTugas || 'Uraian tugas tidak tersedia pada PDF.';
+        loadAttendancePhotos(r.tanggal, document.getElementById('detailPhotos'));
         detailModal.classList.remove('hidden');
+    }
+
+    async function loadAttendancePhotos(date, photoContainer) {
+        const cacheKey = `${selectedIndex}:${date}`;
+        const cachedPhotos = attendancePhotoCache.get(cacheKey);
+        if (cachedPhotos) {
+            renderAttendancePhotos(cachedPhotos, photoContainer);
+            return;
+        }
+
+        const pdfFile = uploadedFiles[selectedIndex];
+        if (!pdfFile) {
+            photoContainer.textContent = 'File PDF sumber tidak tersedia untuk memuat foto.';
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('pdf', pdfFile);
+        formData.append('tanggal', date);
+
+        try {
+            const response = await fetch('/api/day-photos', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) {
+                throw new Error(result.error || 'Gagal memuat foto PIC.');
+            }
+
+            attendancePhotoCache.set(cacheKey, result.photos);
+            if (photoContainer.isConnected) {
+                renderAttendancePhotos(result.photos, photoContainer);
+            }
+        } catch (error) {
+            console.error('Photo extraction error:', error);
+            if (photoContainer.isConnected) {
+                photoContainer.textContent = `Foto PIC gagal dimuat: ${error.message}`;
+            }
+        }
+    }
+
+    function renderAttendancePhotos(photos, photoContainer) {
+        photoContainer.replaceChildren();
+        if (photos.length === 0) {
+            photoContainer.textContent = 'Tidak ada foto PIC pada tanggal ini.';
+            return;
+        }
+
+        photos.forEach(photo => {
+            const card = document.createElement('figure');
+            card.className = 'detail-photo-card';
+
+            const image = document.createElement('img');
+            image.src = photo.dataUrl;
+            image.alt = photo.label;
+            image.loading = 'lazy';
+
+            const caption = document.createElement('figcaption');
+            caption.textContent = photo.label;
+
+            card.append(image, caption);
+            photoContainer.appendChild(card);
+        });
     }
 
     btnCloseModal.addEventListener('click', () => {
