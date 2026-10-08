@@ -36,6 +36,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Table DOM
     const tableTitle = document.getElementById('tableTitle');
     const tableHead = document.getElementById('tableHead');
+    const attendanceTable = document.getElementById('mainDataTable');
+    const tableResponsive = attendanceTable.closest('.table-responsive');
     const searchInput = document.getElementById('searchInput');
     const attendanceTableBody = document.getElementById('attendanceTableBody');
     const filterTabsContainer = document.getElementById('filterTabsContainer');
@@ -202,6 +204,8 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedIndex = index;
         const data = allParsedData[index];
 
+        attendanceTable.classList.remove('batch-summary-table');
+        tableResponsive.classList.remove('batch-summary-view');
         profileCard.classList.remove('hidden');
         filterTabsContainer.classList.remove('hidden');
         tableTitle.innerHTML = `<i class="fa-solid fa-list-check"></i> Detail Absensi & Pemenuhan Jam Kerja - ${data.header.nama}`;
@@ -216,6 +220,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // View: Batch Rekapitulasi Summary
     function switchToBatchRekapView() {
         viewMode = 'batch_rekap';
+        attendanceTable.classList.add('batch-summary-table');
+        tableResponsive.classList.add('batch-summary-view');
         profileCard.classList.add('hidden');
         filterTabsContainer.classList.add('hidden');
         tableTitle.innerHTML = `<i class="fa-solid fa-users"></i> Rekapitulasi Jam Kerja & Kehadiran Pegawai (${allParsedData.length} Pegawai)`;
@@ -312,8 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderBatchRekapTableHead() {
         tableHead.innerHTML = `
             <tr>
-                <th>Nama Pegawai</th>
-                <th>NIP</th>
+                <th>Pegawai</th>
                 <th>Hari Kerja</th>
                 <th>Hadir Utuh</th>
                 <th>Jam Kurang</th>
@@ -322,9 +327,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <th>Sakit</th>
                 <th>Tdk Cek Out/Msk</th>
                 <th>Terlambat</th>
-                <th>Izin/Cuti/Sakit/DL</th>
+                <th>Izin/DL</th>
                 <th>Akumulasi Selisih</th>
-                <th class="text-center">Detail</th>
             </tr>
         `;
     }
@@ -435,7 +439,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (filtered.length === 0) {
             attendanceTableBody.innerHTML = `
                 <tr>
-                    <td colspan="13" class="text-center" style="padding: 32px; color: var(--text-muted);">
+                    <td colspan="11" class="batch-empty-state text-center" style="padding: 32px; color: var(--text-muted);">
                         Tidak ada data pegawai yang sesuai.
                     </td>
                 </tr>
@@ -443,28 +447,33 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        filtered.forEach((d, idx) => {
+        filtered.forEach((d) => {
             const tr = document.createElement('tr');
             const sum = d.summary || {};
+            const employeeIndex = allParsedData.indexOf(d);
 
             tr.innerHTML = `
-                <td><strong>${d.header.nama}</strong></td>
-                <td>${d.header.nip}</td>
-                <td>${sum.totalWorkingDays || 0}</td>
-                <td><span class="badge badge-success">${sum.hadirUtuhCount || 0}</span></td>
-                <td><span class="badge badge-danger">${sum.jamKurangCount || 0}</span></td>
-                <td><span class="badge badge-dark-red">${sum.tidakMelakukanAbsensiCount || 0}</span></td>
-                <td><span class="badge badge-info">${sum.cutiCount || 0}</span></td>
-                <td><span class="badge badge-info">${sum.sakitCount || 0}</span></td>
-                <td><span class="badge badge-warning">${sum.tidakCekOutMasukCount || 0}</span></td>
-                <td><span class="badge badge-warning">${sum.lateDaysCount || 0}</span></td>
-                <td><span class="badge badge-info">${sum.izinCutiDlCount || 0}</span></td>
-                <td><strong class="${sum.isTotalNetAchieved ? 'text-green' : 'text-red'}">${sum.totalDiffFormatted || '0s'}</strong></td>
-                <td class="text-center">
-                    <button class="btn-icon btn-view-emp" data-idx="${idx}" title="Buka Detail Pegawai Ini">
-                        <i class="fa-solid fa-arrow-right"></i>
-                    </button>
+                <td class="batch-employee-cell">
+                    <div class="batch-employee-identity">
+                        <div class="batch-employee-name">
+                            <strong>${d.header.nama}</strong>
+                            <small>NIP: ${d.header.nip}</small>
+                        </div>
+                        <button class="btn-icon btn-view-emp" data-idx="${employeeIndex}" title="Buka Detail Pegawai Ini">
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
                 </td>
+                <td data-label="Hari Kerja">${sum.totalWorkingDays || 0}</td>
+                <td data-label="Hadir Utuh"><span class="badge badge-success">${sum.hadirUtuhCount || 0}</span></td>
+                <td data-label="Jam Kurang"><span class="badge badge-danger">${sum.jamKurangCount || 0}</span></td>
+                <td data-label="Alpa"><span class="badge badge-dark-red">${sum.tidakMelakukanAbsensiCount || 0}</span></td>
+                <td data-label="Cuti"><span class="badge badge-info">${sum.cutiCount || 0}</span></td>
+                <td data-label="Sakit"><span class="badge badge-info">${sum.sakitCount || 0}</span></td>
+                <td data-label="Tidak Cek Out/Masuk"><span class="badge badge-warning">${sum.tidakCekOutMasukCount || 0}</span></td>
+                <td data-label="Terlambat"><span class="badge badge-warning">${sum.lateDaysCount || 0}</span></td>
+                <td data-label="Izin/DL"><span class="badge badge-info">${sum.izinDlCount || 0}</span></td>
+                <td data-label="Akumulasi Selisih"><strong class="${sum.isTotalNetAchieved ? 'text-green' : 'text-red'}">${sum.totalDiffFormatted || '0s'}</strong></td>
             `;
 
             attendanceTableBody.appendChild(tr);
@@ -473,6 +482,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.btn-view-emp').forEach(btn => {
             btn.addEventListener('click', () => {
                 const idx = parseInt(btn.getAttribute('data-idx'), 10);
+                searchQuery = '';
+                searchInput.value = '';
                 employeeSelect.value = idx;
                 switchToEmployeeView(idx);
             });
@@ -645,10 +656,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (allParsedData.length === 0) return;
 
         if (viewMode === 'batch_rekap') {
-            let csv = 'Nama Pegawai,NIP,Bulan,Tahun,Hari Kerja,Hadir Utuh,Jam Kurang,Alpa,Cuti,Sakit,Tidak Cek Out/Masuk,Terlambat,Izin Cuti Sakit DL,Selisih Jam Kerja\n';
+            let csv = 'Nama Pegawai,NIP,Bulan,Tahun,Hari Kerja,Hadir Utuh,Jam Kurang,Alpa,Cuti,Sakit,Tidak Cek Out/Masuk,Terlambat,Izin DL,Selisih Jam Kerja\n';
             allParsedData.forEach(d => {
                 const s = d.summary || {};
-                csv += `"${d.header.nama}","${d.header.nip}","${d.header.bulan}","${d.header.tahun}","${s.totalWorkingDays || 0}","${s.hadirUtuhCount || 0}","${s.jamKurangCount || 0}","${s.tidakMelakukanAbsensiCount || 0}","${s.cutiCount || 0}","${s.sakitCount || 0}","${s.tidakCekOutMasukCount || 0}","${s.lateDaysCount || 0}","${s.izinCutiDlCount || 0}","${s.totalDiffFormatted || '0s'}"\n`;
+                csv += `"${d.header.nama}","${d.header.nip}","${d.header.bulan}","${d.header.tahun}","${s.totalWorkingDays || 0}","${s.hadirUtuhCount || 0}","${s.jamKurangCount || 0}","${s.tidakMelakukanAbsensiCount || 0}","${s.cutiCount || 0}","${s.sakitCount || 0}","${s.tidakCekOutMasukCount || 0}","${s.lateDaysCount || 0}","${s.izinDlCount || 0}","${s.totalDiffFormatted || '0s'}"\n`;
             });
             downloadCsv(csv, `Rekapitulasi_Batch_Absensi_Pegawai.csv`);
         } else {

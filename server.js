@@ -18,12 +18,12 @@ console.warn = function (...args) {
 };
 
 const app = express();
-const PORT = process.env.PORT || 3005;
+const PORT = process.env.PORT || 3000;
 
 // Setup Multer (Memory Storage) - Max 100 files per batch
-const upload = multer({ 
+const upload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 25 * 1024 * 1024 }
+    limits: { fileSize: 25 * 1024 * 1024 },
 });
 
 // Serve Static Files
@@ -47,7 +47,7 @@ function secondsToTime(totalSeconds) {
     const h = Math.floor(totalSeconds / 3600);
     const m = Math.floor((totalSeconds % 3600) / 60);
     const s = totalSeconds % 60;
-    return [h, m, s].map(v => String(v).padStart(2, '0')).join(':');
+    return [h, m, s].map((v) => String(v).padStart(2, '0')).join(':');
 }
 
 function formatDuration(seconds) {
@@ -118,7 +118,7 @@ async function parseAbsensiPdf(buffer, filename = '') {
         nip: nipMatch ? nipMatch[1].trim() : '-',
         bulan: bulanMatch ? bulanMatch[1].trim() : '-',
         tahun: tahunMatch ? tahunMatch[1].trim() : '-',
-        instansi: instansiMatch ? instansiMatch[1].trim().replace(/\n/g, ' ') : 'Instansi'
+        instansi: instansiMatch ? instansiMatch[1].trim().replace(/\n/g, ' ') : 'Instansi',
     };
 
     // Clean up text by removing repetitive page headers/footers
@@ -139,13 +139,13 @@ async function parseAbsensiPdf(buffer, filename = '') {
     for (let i = 0; i < matches.length; i++) {
         const dateStr = matches[i].date;
         const startIndex = matches[i].index + dateStr.length;
-        const endIndex = (i + 1 < matches.length) ? matches[i + 1].index : cleanText.length;
+        const endIndex = i + 1 < matches.length ? matches[i + 1].index : cleanText.length;
         const block = cleanText.substring(startIndex, endIndex).trim();
 
         const dateObj = dayjs(dateStr, 'DD-MM-YYYY');
         const dayOfWeek = dateObj.day(); // 0 = Sunday, 5 = Friday, 6 = Saturday
         const dayName = dayNames[dayOfWeek];
-        const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
         // Strict weekend / holiday detection (Fix: Avoid matching 'mingguan' in activity descriptions)
         const isStandaloneWeekendText = /^\s*(SABTU|MINGGU)\b/i.test(block);
@@ -204,14 +204,15 @@ async function parseAbsensiPdf(buffer, filename = '') {
         let isShortDuration = false;
 
         const stdInSec = 27000; // 07:30:00
-        let stdOutSec = 57600;  // 16:00:00 (Senin - Kamis)
+        let stdOutSec = 57600; // 16:00:00 (Senin - Kamis)
         let breakStartSec = 43200; // 12:00:00
-        let breakEndSec = 46800;   // 13:00:00 (60 menit)
+        let breakEndSec = 46800; // 13:00:00 (60 menit)
 
-        if (dayOfWeek === 5) { // Jumat
-            stdOutSec = 59400;     // 16:30:00
+        if (dayOfWeek === 5) {
+            // Jumat
+            stdOutSec = 59400; // 16:30:00
             breakStartSec = 41400; // 11:30:00
-            breakEndSec = 46800;   // 13:00:00 (90 menit)
+            breakEndSec = 46800; // 13:00:00 (90 menit)
         }
 
         if (isLibur) {
@@ -248,13 +249,14 @@ async function parseAbsensiPdf(buffer, filename = '') {
             status = 'Tidak Melakukan Absensi';
             statusBadge = 'dark-red';
             isAnomaly = true;
-        } else { // Valid Check-in & Check-out present
+        } else {
+            // Valid Check-in & Check-out present
             const inSec = timeToSeconds(jamMasuk);
             const outSec = timeToSeconds(jamPulang);
 
             // Check if Check-In was DL (Dinas Luar)
-            const isInDL = (kodeMasuk === 'DL');
-            const isOutDL = (kodePulang === 'DL');
+            const isInDL = kodeMasuk === 'DL';
+            const isOutDL = kodePulang === 'DL';
 
             if (isInDL) {
                 // Check-in on DL is official duty outside office
@@ -323,24 +325,25 @@ async function parseAbsensiPdf(buffer, filename = '') {
             diffTargetSec,
             diffTargetFormatted: formatDuration(diffTargetSec),
             status,
-            statusBadge
+            statusBadge,
         });
     }
 
     // Summary Statistics
-    const workingDays = records.filter(r => !r.isWeekend);
-    const hadirUtuhCount = workingDays.filter(r => r.status === 'Hadir Utuh').length;
-    const jamKurangCount = workingDays.filter(r => r.status === 'Jam Kerja Kurang').length;
-    const tidakMelakukanAbsensiCount = workingDays.filter(r => r.status === 'Tidak Melakukan Absensi').length;
-    const cutiCount = workingDays.filter(r => r.status === 'Cuti').length;
-    const sakitCount = workingDays.filter(r => r.status === 'Sakit').length;
-    const tidakCekOutMasukCount = workingDays.filter(r => r.status === 'Tidak Cek Out' || r.status === 'Tidak Cek Masuk').length;
-    const izinCutiDlCount = workingDays.filter(r => r.isExcused || r.isDL).length;
-    const lateDaysCount = workingDays.filter(r => r.isLate).length;
-    const anomalyDaysCount = workingDays.filter(r => r.isAnomaly).length;
+    const workingDays = records.filter((r) => !r.isWeekend);
+    const hadirUtuhCount = workingDays.filter((r) => r.status === 'Hadir Utuh').length;
+    const jamKurangCount = workingDays.filter((r) => r.status === 'Jam Kerja Kurang').length;
+    const tidakMelakukanAbsensiCount = workingDays.filter((r) => r.status === 'Tidak Melakukan Absensi').length;
+    const cutiCount = workingDays.filter((r) => r.status === 'Cuti').length;
+    const sakitCount = workingDays.filter((r) => r.status === 'Sakit').length;
+    const tidakCekOutMasukCount = workingDays.filter((r) => r.status === 'Tidak Cek Out' || r.status === 'Tidak Cek Masuk').length;
+    const izinDlCount = workingDays.filter((r) => r.status === 'Izin' || (r.isDL && r.status !== 'Cuti' && r.status !== 'Sakit')).length;
+    const izinCutiDlCount = workingDays.filter((r) => r.isExcused || r.isDL).length;
+    const lateDaysCount = workingDays.filter((r) => r.isLate).length;
+    const anomalyDaysCount = workingDays.filter((r) => r.isAnomaly).length;
 
     // Evaluated days (excluding excused / unexcused absences)
-    const evaluatedDays = workingDays.filter(r => !r.isExcused && r.status !== 'Tidak Melakukan Absensi' && r.status !== 'Tidak Cek Out' && r.status !== 'Tidak Cek Masuk');
+    const evaluatedDays = workingDays.filter((r) => !r.isExcused && r.status !== 'Tidak Melakukan Absensi' && r.status !== 'Tidak Cek Out' && r.status !== 'Tidak Cek Masuk');
 
     const totalLateSec = workingDays.reduce((acc, r) => acc + r.lateSec, 0);
     const totalNetSec = workingDays.reduce((acc, r) => acc + r.netSec, 0);
@@ -357,6 +360,7 @@ async function parseAbsensiPdf(buffer, filename = '') {
         cutiCount,
         sakitCount,
         tidakCekOutMasukCount,
+        izinDlCount,
         izinCutiDlCount,
         lateDaysCount,
         anomalyDaysCount,
@@ -364,13 +368,13 @@ async function parseAbsensiPdf(buffer, filename = '') {
         totalNetFormatted: formatDurationSimple(totalNetSec),
         totalTargetFormatted: formatDurationSimple(totalTargetSec),
         totalDiffFormatted: formatDuration(totalDiffSec),
-        isTotalNetAchieved: totalDiffSec >= 0
+        isTotalNetAchieved: totalDiffSec >= 0,
     };
 
     return {
         header,
         summary,
-        records
+        records,
     };
 }
 
@@ -379,7 +383,7 @@ async function extractAttendancePhotos(buffer, dateStr) {
     const parser = new PDFParse(new Uint8Array(buffer));
     try {
         const textResult = await parser.getText();
-        const targetPage = textResult.pages.find(page => page.text.includes(dateStr));
+        const targetPage = textResult.pages.find((page) => page.text.includes(dateStr));
         if (!targetPage) {
             const error = new Error(`Tanggal ${dateStr} tidak ditemukan pada PDF.`);
             error.statusCode = 404;
@@ -388,8 +392,7 @@ async function extractAttendancePhotos(buffer, dateStr) {
 
         const page = await parser.doc.getPage(targetPage.num);
         const textContent = await page.getTextContent();
-        const dateItem = textContent.items.find(item => item.str.trim() === dateStr)
-            || textContent.items.find(item => item.str.includes(dateStr));
+        const dateItem = textContent.items.find((item) => item.str.trim() === dateStr) || textContent.items.find((item) => item.str.includes(dateStr));
         if (!dateItem) {
             throw new Error(`Posisi tanggal ${dateStr} tidak dapat dibaca dari PDF.`);
         }
@@ -398,15 +401,12 @@ async function extractAttendancePhotos(buffer, dateStr) {
             partial: [targetPage.num],
             imageThreshold: 200,
             imageDataUrl: true,
-            imageBuffer: false
+            imageBuffer: false,
         });
         const images = imagesResult.pages[0]?.images || [];
         const operatorList = await page.getOperatorList();
         const imageOperations = [];
-        const imageOps = new Set([
-            pdfjs.OPS.paintInlineImageXObject,
-            pdfjs.OPS.paintImageXObject
-        ]);
+        const imageOps = new Set([pdfjs.OPS.paintInlineImageXObject, pdfjs.OPS.paintImageXObject]);
         const matrixStack = [];
         let transform = [1, 0, 0, 1, 0, 0];
 
@@ -424,7 +424,7 @@ async function extractAttendancePhotos(buffer, dateStr) {
                 if (width > 200 && height > 200) {
                     imageOperations.push({
                         x: transform[0] / 2 + transform[2] / 2 + transform[4],
-                        y: transform[1] / 2 + transform[3] / 2 + transform[5]
+                        y: transform[1] / 2 + transform[3] / 2 + transform[5],
                     });
                 }
             }
@@ -437,21 +437,22 @@ async function extractAttendancePhotos(buffer, dateStr) {
         const picColumnSplitX = page.getViewport({ scale: 1 }).width * 0.87;
         const dayPhotos = images
             .map((image, index) => ({ ...imageOperations[index], dataUrl: image.dataUrl }))
-            .filter(image => {
+            .filter((image) => {
                 const closestDate = textContent.items
-                    .filter(item => /^\d{2}-\d{2}-\d{4}$/.test(item.str.trim()))
-                    .reduce((closest, item) => {
-                        const distance = Math.abs(item.transform[5] - image.y);
-                        return distance < closest.distance
-                            ? { date: item.str.trim(), distance }
-                            : closest;
-                    }, { date: '', distance: Infinity });
+                    .filter((item) => /^\d{2}-\d{2}-\d{4}$/.test(item.str.trim()))
+                    .reduce(
+                        (closest, item) => {
+                            const distance = Math.abs(item.transform[5] - image.y);
+                            return distance < closest.distance ? { date: item.str.trim(), distance } : closest;
+                        },
+                        { date: '', distance: Infinity },
+                    );
                 return closestDate.date === dateStr;
             })
             .sort((first, second) => first.x - second.x)
-            .map(image => ({
+            .map((image) => ({
                 label: image.x < picColumnSplitX ? 'Foto PIC Masuk' : 'Foto PIC Pulang',
-                dataUrl: image.dataUrl
+                dataUrl: image.dataUrl,
             }));
 
         return dayPhotos;
@@ -477,18 +478,18 @@ app.post('/api/upload', upload.array('pdf', 100), async (req, res) => {
                 results.push({
                     header: { filename: file.originalname, nama: file.originalname, nip: '-', bulan: '-', tahun: '-', instansi: 'Error' },
                     error: err.message,
-                    summary: { totalWorkingDays: 0, hadirUtuhCount: 0, jamKurangCount: 0, tidakMelakukanAbsensiCount: 0, izinCutiDlCount: 0, totalDiffFormatted: '0s' },
-                    records: []
+                    summary: { totalWorkingDays: 0, hadirUtuhCount: 0, jamKurangCount: 0, tidakMelakukanAbsensiCount: 0, cutiCount: 0, sakitCount: 0, izinDlCount: 0, izinCutiDlCount: 0, totalDiffFormatted: '0s' },
+                    records: [],
                 });
             }
         }
 
-        return res.json({ 
-            success: true, 
+        return res.json({
+            success: true,
             count: results.length,
             isBatch: results.length > 1,
             data: results.length === 1 ? results[0] : results,
-            allResults: results
+            allResults: results,
         });
     } catch (err) {
         console.error('Error processing PDF batch:', err);
@@ -511,7 +512,7 @@ app.post('/api/day-photos', upload.single('pdf'), async (req, res) => {
         console.error(`Error extracting photos for ${req.body.tanggal}:`, err);
         return res.status(err.statusCode || 500).json({
             success: false,
-            error: err.message || 'Gagal mengambil foto PIC dari PDF.'
+            error: err.message || 'Gagal mengambil foto PIC dari PDF.',
         });
     }
 });
