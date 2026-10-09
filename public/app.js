@@ -13,6 +13,23 @@ document.addEventListener('DOMContentLoaded', () => {
     // Batch Selector DOM
     const batchSelectorBar = document.getElementById('batchSelectorBar');
     const employeeSelect = document.getElementById('employeeSelect');
+    const attendanceInsight = document.getElementById('attendanceInsight');
+    const insightTitle = document.getElementById('insightTitle');
+    const insightBadge = document.getElementById('insightBadge');
+    const insightSubtitle = document.getElementById('insightSubtitle');
+    const insightSummary = document.getElementById('insightSummary');
+    const insightAttendanceLabel = document.getElementById('insightAttendanceLabel');
+    const insightAttendanceRate = document.getElementById('insightAttendanceRate');
+    const insightAttendanceCount = document.getElementById('insightAttendanceCount');
+    const insightShortLabel = document.getElementById('insightShortLabel');
+    const insightShortCount = document.getElementById('insightShortCount');
+    const insightShortRate = document.getElementById('insightShortRate');
+    const insightAbsentLabel = document.getElementById('insightAbsentLabel');
+    const insightAbsentCount = document.getElementById('insightAbsentCount');
+    const insightAbsentRate = document.getElementById('insightAbsentRate');
+    const insightLateCount = document.getElementById('insightLateCount');
+    const insightLateAverage = document.getElementById('insightLateAverage');
+    const insightAction = document.getElementById('insightAction');
 
     // Profile DOM
     const profileCard = document.getElementById('profileCard');
@@ -204,6 +221,8 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedIndex = index;
         const data = allParsedData[index];
 
+        attendanceInsight.classList.remove('hidden');
+        renderEmployeeInsight(data);
         attendanceTable.classList.remove('batch-summary-table');
         tableResponsive.classList.remove('batch-summary-view');
         profileCard.classList.remove('hidden');
@@ -220,6 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // View: Batch Rekapitulasi Summary
     function switchToBatchRekapView() {
         viewMode = 'batch_rekap';
+        attendanceInsight.classList.remove('hidden');
         attendanceTable.classList.add('batch-summary-table');
         tableResponsive.classList.add('batch-summary-view');
         profileCard.classList.add('hidden');
@@ -232,6 +252,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const totalJamKurang = allParsedData.reduce((acc, d) => acc + (d.summary ? d.summary.jamKurangCount : 0), 0);
         const totalTidakAbsen = allParsedData.reduce((acc, d) => acc + (d.summary ? d.summary.tidakMelakukanAbsensiCount : 0), 0);
         const totalLateDays = allParsedData.reduce((acc, d) => acc + (d.summary ? d.summary.lateDaysCount : 0), 0);
+
+        renderAttendanceInsight();
 
         kpiWorkingDays.textContent = totalWorkingDays;
         kpiHadirUtuh.textContent = totalHadirUtuh;
@@ -248,6 +270,133 @@ document.addEventListener('DOMContentLoaded', () => {
 
         renderBatchRekapTableHead();
         renderBatchRekapTableBody();
+    }
+
+    function renderAttendanceInsight() {
+        insightTitle.textContent = 'Generative Insight';
+        insightBadge.textContent = 'INSIGHT OTOMATIS';
+        insightAttendanceLabel.textContent = 'Hadir penuh';
+        insightShortLabel.textContent = 'Jam kerja kurang';
+        insightAbsentLabel.textContent = 'Tidak absen / alpa';
+
+        const validData = allParsedData.filter(d => !d.error && d.summary);
+        const failedCount = allParsedData.length - validData.length;
+        const totalWorkingDays = validData.reduce((total, d) => total + (d.summary.totalWorkingDays || 0), 0);
+        const totalHadir = validData.reduce((total, d) => total + (d.summary.hadirUtuhCount || 0), 0);
+        const totalKurang = validData.reduce((total, d) => total + (d.summary.jamKurangCount || 0), 0);
+        const totalTidakAbsen = validData.reduce((total, d) => total + (d.summary.tidakMelakukanAbsensiCount || 0), 0);
+        const totalTidakCekOutMasuk = validData.reduce((total, d) => total + (d.summary.tidakCekOutMasukCount || 0), 0);
+        const totalTerlambat = validData.reduce((total, d) => total + (d.summary.lateDaysCount || 0), 0);
+        const numberFormat = new Intl.NumberFormat('id-ID');
+        const percent = count => totalWorkingDays > 0
+            ? `${((count / totalWorkingDays) * 100).toLocaleString('id-ID', { maximumFractionDigits: 1 })}%`
+            : '0%';
+        const periods = [...new Set(validData.map(d => `${d.header.bulan} ${d.header.tahun}`.trim()).filter(Boolean))];
+
+        insightSubtitle.textContent = `${validData.length} pegawai terproses${periods.length ? ` · ${periods.join(', ')}` : ''}`;
+        insightAttendanceRate.textContent = percent(totalHadir);
+        insightAttendanceCount.textContent = `${numberFormat.format(totalHadir)} dari ${numberFormat.format(totalWorkingDays)} hari pegawai`;
+        insightShortCount.textContent = `${numberFormat.format(totalKurang)} hari`;
+        insightShortRate.textContent = `${percent(totalKurang)} dari hari kerja pegawai`;
+        insightAbsentCount.textContent = `${numberFormat.format(totalTidakAbsen)} hari`;
+        insightAbsentRate.textContent = `${percent(totalTidakAbsen)} dari hari kerja pegawai`;
+        insightLateCount.textContent = `${numberFormat.format(totalTerlambat)} hari`;
+        insightLateAverage.textContent = validData.length
+            ? `Rata-rata ${(totalTerlambat / validData.length).toLocaleString('id-ID', { maximumFractionDigits: 1 })} hari per pegawai`
+            : 'Tidak ada data pegawai valid';
+
+        const followUpItems = [
+            { count: totalKurang, label: 'jam kerja kurang' },
+            { count: totalTidakAbsen, label: 'tidak melakukan absensi' },
+            { count: totalTidakCekOutMasuk, label: 'tidak cek masuk/pulang' },
+        ].sort((first, second) => second.count - first.count);
+        const mainFollowUp = followUpItems[0];
+
+        if (totalWorkingDays === 0) {
+            insightSummary.textContent = 'Belum ada hari kerja dari PDF yang berhasil diproses untuk diringkas.';
+            insightAction.textContent = 'Pastikan PDF berisi tabel absensi yang dapat dibaca, lalu unggah ulang file yang gagal diproses.';
+        } else {
+            const mainFollowUpSummary = mainFollowUp.count > 0
+                ? `${mainFollowUp.label} (${numberFormat.format(mainFollowUp.count)} hari)`
+                : 'tidak ada catatan jam kerja kurang, alpa, atau ketidaklengkapan cek masuk/pulang';
+            insightSummary.textContent = `Dari ${numberFormat.format(totalWorkingDays)} hari kerja pegawai, ${percent(totalHadir)} tercatat hadir penuh. Catatan terbanyak: ${mainFollowUpSummary}; keterlambatan tercatat ${numberFormat.format(totalTerlambat)} hari.`;
+            insightAction.textContent = mainFollowUp.count > 0
+                ? `Prioritas telaah: verifikasi ${numberFormat.format(mainFollowUp.count)} catatan ${mainFollowUp.label}, lalu cocokkan dengan keterangan atau bukti pendukung.`
+                : 'Pertahankan konsistensi, dan telaah catatan keterlambatan sesuai kebutuhan.';
+        }
+
+        if (failedCount > 0) {
+            insightSubtitle.textContent += ` · ${failedCount} PDF gagal diproses dan tidak dihitung`;
+        }
+    }
+
+    function renderEmployeeInsight(data) {
+        insightTitle.textContent = 'Insight Pegawai';
+        insightBadge.textContent = 'INSIGHT PEGAWAI';
+        insightAttendanceLabel.textContent = 'Hadir penuh';
+        insightShortLabel.textContent = 'Jam kerja kurang';
+        insightAbsentLabel.textContent = 'Catatan absensi';
+
+        const summary = data.summary || {};
+        const records = data.records || [];
+        const workingDays = summary.totalWorkingDays || 0;
+        const presentDays = summary.hadirUtuhCount || 0;
+        const shortDays = summary.jamKurangCount || 0;
+        const absentDays = summary.tidakMelakukanAbsensiCount || 0;
+        const incompleteDays = summary.tidakCekOutMasukCount || 0;
+        const lateDays = summary.lateDaysCount || 0;
+        const totalLateSeconds = records.reduce((total, record) => total + (record.isLate ? record.lateSec || 0 : 0), 0);
+        const highestLateRecord = records
+            .filter(record => record.isLate)
+            .reduce((highest, record) => !highest || record.lateSec > highest.lateSec ? record : highest, null);
+        const numberFormat = new Intl.NumberFormat('id-ID');
+        const percent = count => workingDays > 0
+            ? `${((count / workingDays) * 100).toLocaleString('id-ID', { maximumFractionDigits: 1 })}%`
+            : '0%';
+        const averageLateMinutes = lateDays > 0
+            ? Math.round(totalLateSeconds / lateDays / 60)
+            : 0;
+        const period = `${data.header.bulan} ${data.header.tahun}`.trim();
+
+        insightSubtitle.textContent = `${data.header.nama}${period ? ` · ${period}` : ''}`;
+        insightAttendanceRate.textContent = percent(presentDays);
+        insightAttendanceCount.textContent = `${numberFormat.format(presentDays)} dari ${numberFormat.format(workingDays)} hari kerja`;
+        insightShortCount.textContent = `${numberFormat.format(shortDays)} hari`;
+        insightShortRate.textContent = `${percent(shortDays)} dari hari kerja`;
+        insightAbsentCount.textContent = `${numberFormat.format(absentDays + incompleteDays)} hari`;
+        insightAbsentRate.textContent = `${numberFormat.format(absentDays)} alpa · ${numberFormat.format(incompleteDays)} cek tidak lengkap`;
+        insightLateCount.textContent = `${numberFormat.format(lateDays)} hari`;
+        insightLateAverage.textContent = lateDays > 0
+            ? `${summary.totalLateFormatted || '0 menit'} total · rata-rata ${numberFormat.format(averageLateMinutes)} menit`
+            : 'Tidak ada keterlambatan tercatat';
+
+        if (data.error) {
+            insightSummary.textContent = `Insight belum dapat dibuat karena data absensi ${data.header.nama} gagal diproses.`;
+            insightAction.textContent = 'Periksa PDF sumber atau unggah ulang file ini agar data pegawai dapat dianalisis.';
+            return;
+        }
+
+        if (workingDays === 0) {
+            insightSummary.textContent = `Belum ada hari kerja yang dapat diringkas untuk ${data.header.nama}.`;
+            insightAction.textContent = 'Pastikan PDF berisi tabel absensi yang dapat dibaca, lalu unggah ulang file jika diperlukan.';
+            return;
+        }
+
+        const focusItems = [
+            { count: shortDays, label: 'hari jam kerja kurang' },
+            { count: absentDays, label: 'hari tanpa absensi' },
+            { count: incompleteDays, label: 'hari dengan cek masuk/pulang tidak lengkap' },
+            { count: lateDays, label: 'hari terlambat' },
+        ].sort((first, second) => second.count - first.count);
+        const mainFocus = focusItems[0];
+        const peakLateness = highestLateRecord
+            ? ` Keterlambatan terlama tercatat ${highestLateRecord.lateFormatted} pada ${highestLateRecord.tanggal}.`
+            : '';
+
+        insightSummary.textContent = `${data.header.nama} tercatat hadir penuh ${numberFormat.format(presentDays)} dari ${numberFormat.format(workingDays)} hari kerja (${percent(presentDays)}). Catatan utama: ${numberFormat.format(mainFocus.count)} ${mainFocus.label}.${peakLateness}`;
+        insightAction.textContent = mainFocus.count > 0
+            ? `Prioritas telaah: verifikasi ${mainFocus.label}, lalu cocokkan dengan keterangan atau bukti pendukung sebelum menarik kesimpulan.`
+            : 'Tidak ada catatan jam kerja kurang, alpa, cek tidak lengkap, atau keterlambatan pada data pegawai ini.';
     }
 
     // Render Employee Profile Card

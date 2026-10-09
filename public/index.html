@@ -171,6 +171,55 @@
                     </div>
                 </div>
 
+                <!-- Batch attendance insights -->
+                <section id="attendanceInsight" class="insight-panel glass-panel hidden"
+                    aria-labelledby="insightTitle" aria-live="polite">
+                    <div class="insight-heading">
+                        <div class="insight-title">
+                            <span class="insight-icon"><i
+                                    class="fa-solid fa-wand-magic-sparkles"></i></span>
+                            <div>
+                                <h3 id="insightTitle">Generative Insight</h3>
+                                <p id="insightSubtitle">Analisis ringkas dari data absensi yang
+                                    diproses</p>
+                            </div>
+                        </div>
+                        <span id="insightBadge" class="insight-badge">INSIGHT OTOMATIS</span>
+                    </div>
+                    <p id="insightSummary" class="insight-summary"></p>
+                    <div class="insight-metrics">
+                        <div class="insight-metric">
+                            <span id="insightAttendanceLabel">Hadir penuh</span>
+                            <strong id="insightAttendanceRate">-</strong>
+                            <small id="insightAttendanceCount">-</small>
+                        </div>
+                        <div class="insight-metric">
+                            <span id="insightShortLabel">Jam kerja kurang</span>
+                            <strong id="insightShortCount">-</strong>
+                            <small id="insightShortRate">-</small>
+                        </div>
+                        <div class="insight-metric">
+                            <span id="insightAbsentLabel">Tidak absen / alpa</span>
+                            <strong id="insightAbsentCount">-</strong>
+                            <small id="insightAbsentRate">-</small>
+                        </div>
+                        <div class="insight-metric">
+                            <span>Keterlambatan</span>
+                            <strong id="insightLateCount">-</strong>
+                            <small id="insightLateAverage">-</small>
+                        </div>
+                    </div>
+                    <div class="insight-guidance">
+                        <i class="fa-solid fa-lightbulb" aria-hidden="true"></i>
+                        <p id="insightAction"></p>
+                    </div>
+                    <p id="insightFootnote" class="insight-footnote">
+                        Insight dihitung otomatis dari PDF yang berhasil diproses. Gunakan sebagai
+                        bahan telaah,
+                        bukan penilaian otomatis terhadap pegawai.
+                    </p>
+                </section>
+
                 <!-- Table & Controls Section -->
                 <div class="table-container-panel glass-panel">
                     <div class="panel-header">
