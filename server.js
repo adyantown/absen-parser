@@ -5,6 +5,7 @@ const dayjs = require('dayjs');
 const customParseFormat = require('dayjs/plugin/customParseFormat');
 const path = require('path');
 const fs = require('fs');
+const { createAttendanceReport } = require('./attendance-report');
 
 dayjs.extend(customParseFormat);
 
@@ -28,7 +29,7 @@ const upload = multer({
 
 // Serve Static Files
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.json());
+app.use(express.json({ limit: '5mb' }));
 
 // Helper Functions
 function timeToSeconds(timeStr) {
@@ -514,6 +515,20 @@ app.post('/api/day-photos', upload.single('pdf'), async (req, res) => {
             success: false,
             error: err.message || 'Gagal mengambil foto PIC dari PDF.',
         });
+    }
+});
+
+app.post('/api/export-attendance-pdf', async (req, res) => {
+    try {
+        const pdf = await createAttendanceReport(req.body);
+        const month = req.body.month.trim().toUpperCase();
+        const year = req.body.year;
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="Rekap_Absensi_${month}_${year}.pdf"`);
+        return res.send(pdf);
+    } catch (err) {
+        console.error('Error generating monthly attendance PDF:', err);
+        return res.status(400).json({ success: false, error: err.message || 'Gagal membuat PDF rekap absensi.' });
     }
 });
 

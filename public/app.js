@@ -43,6 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const filterTabsContainer = document.getElementById('filterTabsContainer');
     const tabBtns = document.querySelectorAll('.tab-btn');
     const btnExportCsv = document.getElementById('btnExportCsv');
+    const btnExportPdf = document.getElementById('btnExportPdf');
 
     // Tab counts
     const countAll = document.getElementById('countAll');
@@ -669,6 +670,69 @@ document.addEventListener('DOMContentLoaded', () => {
                 csv += `"${r.tanggal}","${r.hari}","${r.jamMasuk}","${r.kodeMasuk}","${r.jamPulang}","${r.kodePulang}","${r.lateFormatted}","${r.minOutStr}","${r.netFormatted}","${r.status}"\n`;
             });
             downloadCsv(csv, `Laporan_Absensi_${data.header.nama.replace(/\s+/g, '_')}_${data.header.bulan}_${data.header.tahun}.csv`);
+        }
+    });
+
+    btnExportPdf.addEventListener('click', async () => {
+        if (allParsedData.length === 0) return;
+        if (allParsedData.some(data => data.error)) {
+            alert('PDF tidak dapat dibuat karena ada file absensi yang gagal diproses.');
+            return;
+        }
+
+        const firstHeader = allParsedData[0].header;
+        const samePeriod = allParsedData.every(data =>
+            data.header.bulan.trim().toLocaleUpperCase('id-ID') === firstHeader.bulan.trim().toLocaleUpperCase('id-ID')
+            && data.header.tahun === firstHeader.tahun
+        );
+        if (!samePeriod) {
+            alert('PDF rekap hanya dapat dibuat jika semua file berasal dari bulan dan tahun yang sama.');
+            return;
+        }
+
+        const payload = {
+            month: firstHeader.bulan,
+            year: Number(firstHeader.tahun),
+            employees: allParsedData.map(data => ({
+                name: data.header.nama,
+                nip: data.header.nip,
+                records: data.records.map(record => ({
+                    tanggal: record.tanggal,
+                    status: record.status,
+                    isWeekend: record.isWeekend,
+                    jamMasuk: record.jamMasuk,
+                    kodeMasuk: record.kodeMasuk,
+                    jamPulang: record.jamPulang,
+                    kodePulang: record.kodePulang
+                }))
+            }))
+        };
+
+        btnExportPdf.disabled = true;
+        try {
+            const response = await fetch('/api/export-attendance-pdf', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const result = await response.json();
+                throw new Error(result.error || 'Gagal membuat PDF rekap absensi.');
+            }
+
+            const pdfBlob = await response.blob();
+            const downloadUrl = URL.createObjectURL(pdfBlob);
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = `Rekap_Absensi_${firstHeader.bulan}_${firstHeader.tahun}.pdf`;
+            link.click();
+            setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+        } catch (error) {
+            console.error('PDF export error:', error);
+            alert(`Gagal mengekspor PDF: ${error.message}`);
+        } finally {
+            btnExportPdf.disabled = false;
         }
     });
 
