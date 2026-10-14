@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Global State
     let allParsedData = []; // Array of employee objects
-    let selectedIndex = 0;  // Index of selected employee
+    let selectedIndex = 0; // Index of selected employee
     let isBatchMode = false;
     let viewMode = 'single'; // 'single' or 'batch_rekap'
     let activeFilter = 'all';
@@ -74,20 +74,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const attendancePhotoCache = new Map();
 
     // Drag & Drop Handlers
-    ['dragenter', 'dragover'].forEach(eventName => {
-        dropzone.addEventListener(eventName, (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            dropzone.classList.add('drag-over');
-        }, false);
+    ['dragenter', 'dragover'].forEach((eventName) => {
+        dropzone.addEventListener(
+            eventName,
+            (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.classList.add('drag-over');
+            },
+            false,
+        );
     });
 
-    ['dragleave', 'drop'].forEach(eventName => {
-        dropzone.addEventListener(eventName, (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            dropzone.classList.remove('drag-over');
-        }, false);
+    ['dragleave', 'drop'].forEach((eventName) => {
+        dropzone.addEventListener(
+            eventName,
+            (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.classList.remove('drag-over');
+            },
+            false,
+        );
     });
 
     dropzone.addEventListener('drop', (e) => {
@@ -119,7 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Handle Upload Call
     async function handleFileUpload(fileList) {
-        const files = Array.from(fileList).filter(f => f.type === 'application/pdf' || f.name.endsWith('.pdf'));
+        const files = Array.from(fileList).filter((f) => f.type === 'application/pdf' || f.name.endsWith('.pdf'));
         if (files.length === 0) {
             alert('Silakan pilih setidaknya satu file PDF.');
             return;
@@ -133,12 +141,12 @@ document.addEventListener('DOMContentLoaded', () => {
         loadingText.textContent = `Memproses ${files.length} file PDF absensi...`;
 
         const formData = new FormData();
-        files.forEach(f => formData.append('pdf', f));
+        files.forEach((f) => formData.append('pdf', f));
 
         try {
             const response = await fetch('/api/upload', {
                 method: 'POST',
-                body: formData
+                body: formData,
             });
 
             const result = await response.json();
@@ -263,7 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderSummaryKpis(summary) {
         kpiWorkingDays.textContent = summary.totalWorkingDays;
         kpiHadirUtuh.textContent = summary.hadirUtuhCount;
-        
+
         const hadirPct = summary.totalWorkingDays > 0 ? Math.round((summary.hadirUtuhCount / summary.totalWorkingDays) * 100) : 0;
         kpiHadirUtuhPct.textContent = `${hadirPct}% dari hari kerja`;
 
@@ -338,13 +346,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderTable(records) {
         attendanceTableBody.innerHTML = '';
 
-        const filtered = records.filter(r => {
+        const filtered = records.filter((r) => {
             if (activeFilter === 'Hadir Penuh' && r.status !== 'Hadir Penuh') return false;
             if (activeFilter === 'Jam Kerja Kurang' && r.status !== 'Jam Kerja Kurang') return false;
             if (activeFilter === 'Tidak Melakukan Absensi' && r.status !== 'Tidak Melakukan Absensi') return false;
             if (activeFilter === 'Cuti' && r.status !== 'Cuti') return false;
             if (activeFilter === 'Sakit' && r.status !== 'Sakit') return false;
-            if (activeFilter === 'Tidak Cek Out/Masuk' && (r.status !== 'Tidak Cek Out' && r.status !== 'Tidak Cek Masuk')) return false;
+            if (activeFilter === 'Tidak Cek Out/Masuk' && r.status !== 'Tidak Cek Out' && r.status !== 'Tidak Cek Masuk') return false;
             if (activeFilter === 'Terlambat' && !r.isLate) return false;
             if (activeFilter === 'Izin/Cuti/Sakit/DL' && !r.isExcused && !r.isDL) return false;
             if (activeFilter === 'Libur' && !r.isWeekend) return false;
@@ -415,10 +423,10 @@ document.addEventListener('DOMContentLoaded', () => {
             attendanceTableBody.appendChild(tr);
         });
 
-        document.querySelectorAll('.btn-detail').forEach(btn => {
+        document.querySelectorAll('.btn-detail').forEach((btn) => {
             btn.addEventListener('click', () => {
                 const dateStr = btn.getAttribute('data-date');
-                const rec = allParsedData[selectedIndex].records.find(item => item.tanggal === dateStr);
+                const rec = allParsedData[selectedIndex].records.find((item) => item.tanggal === dateStr);
                 if (rec) showDetailModal(rec);
             });
         });
@@ -428,7 +436,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderBatchRekapTableBody() {
         attendanceTableBody.innerHTML = '';
 
-        const filtered = allParsedData.filter(d => {
+        const filtered = allParsedData.filter((d) => {
             if (searchQuery.trim() !== '') {
                 const q = searchQuery.toLowerCase();
                 const textStr = `${d.header.nama} ${d.header.nip} ${d.header.bulan}`.toLowerCase();
@@ -480,7 +488,7 @@ document.addEventListener('DOMContentLoaded', () => {
             attendanceTableBody.appendChild(tr);
         });
 
-        document.querySelectorAll('.btn-view-emp').forEach(btn => {
+        document.querySelectorAll('.btn-view-emp').forEach((btn) => {
             btn.addEventListener('click', () => {
                 const idx = parseInt(btn.getAttribute('data-idx'), 10);
                 searchQuery = '';
@@ -501,8 +509,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p class="detail-task" id="detailTaskDescription"></p>
             </section>
             <section class="detail-section">
-                <h4><i class="fa-solid fa-camera"></i> Foto PIC</h4>
-                <div class="detail-photo-grid" id="detailPhotos" aria-live="polite">Memuat foto PIC...</div>
+                <h4><i class="fa-solid fa-camera"></i> Foto Kehadiran</h4>
+                <div class="detail-photo-grid" id="detailPhotos" aria-live="polite">Memuat foto kehadiran...</div>
             </section>
             <div class="detail-list">
                 <div class="detail-item">
@@ -579,11 +587,11 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch('/api/day-photos', {
                 method: 'POST',
-                body: formData
+                body: formData,
             });
             const result = await response.json();
             if (!response.ok || !result.success) {
-                throw new Error(result.error || 'Gagal memuat foto PIC.');
+                throw new Error(result.error || 'Gagal memuat foto kehadiran.');
             }
 
             attendancePhotoCache.set(cacheKey, result.photos);
@@ -593,7 +601,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Photo extraction error:', error);
             if (photoContainer.isConnected) {
-                photoContainer.textContent = `Foto PIC gagal dimuat: ${error.message}`;
+                photoContainer.textContent = `Foto kehadiran gagal dimuat: ${error.message}`;
             }
         }
     }
@@ -601,11 +609,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderAttendancePhotos(photos, photoContainer) {
         photoContainer.replaceChildren();
         if (photos.length === 0) {
-            photoContainer.textContent = 'Tidak ada foto PIC pada tanggal ini.';
+            photoContainer.textContent = 'Tidak ada foto kehadiran pada tanggal ini.';
             return;
         }
 
-        photos.forEach(photo => {
+        photos.forEach((photo) => {
             const card = document.createElement('figure');
             card.className = 'detail-photo-card';
 
@@ -631,9 +639,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Filter Tab Clicks
-    tabBtns.forEach(btn => {
+    tabBtns.forEach((btn) => {
         btn.addEventListener('click', () => {
-            tabBtns.forEach(b => b.classList.remove('active'));
+            tabBtns.forEach((b) => b.classList.remove('active'));
             btn.classList.add('active');
             activeFilter = btn.getAttribute('data-filter');
             if (viewMode === 'single' && allParsedData[selectedIndex]) {
@@ -658,7 +666,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (viewMode === 'batch_rekap') {
             let csv = 'Nama Pegawai,NIP,Bulan,Tahun,Hari Kerja,Hadir Penuh,Jam Kurang,Alpa,Cuti,Sakit,Tidak Cek Out/Masuk,Terlambat,Izin DL,Selisih Jam Kerja\n';
-            allParsedData.forEach(d => {
+            allParsedData.forEach((d) => {
                 const s = d.summary || {};
                 csv += `"${d.header.nama}","${d.header.nip}","${d.header.bulan}","${d.header.tahun}","${s.totalWorkingDays || 0}","${s.hadirUtuhCount || 0}","${s.jamKurangCount || 0}","${s.tidakMelakukanAbsensiCount || 0}","${s.cutiCount || 0}","${s.sakitCount || 0}","${s.tidakCekOutMasukCount || 0}","${s.lateDaysCount || 0}","${s.izinDlCount || 0}","${s.totalDiffFormatted || '0s'}"\n`;
             });
@@ -666,7 +674,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             const data = allParsedData[selectedIndex];
             let csv = 'Tanggal,Hari,Jam Masuk,Kode Masuk,Jam Pulang,Kode Pulang,Keterlambatan,Jam Pulang Wajib Min,Durasi Net,Status\n';
-            data.records.forEach(r => {
+            data.records.forEach((r) => {
                 csv += `"${r.tanggal}","${r.hari}","${r.jamMasuk}","${r.kodeMasuk}","${r.jamPulang}","${r.kodePulang}","${r.lateFormatted}","${r.minOutStr}","${r.netFormatted}","${r.status}"\n`;
             });
             downloadCsv(csv, `Laporan_Absensi_${data.header.nama.replace(/\s+/g, '_')}_${data.header.bulan}_${data.header.tahun}.csv`);
@@ -675,16 +683,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     btnExportPdf.addEventListener('click', async () => {
         if (allParsedData.length === 0) return;
-        if (allParsedData.some(data => data.error)) {
+        if (allParsedData.some((data) => data.error)) {
             alert('PDF tidak dapat dibuat karena ada file absensi yang gagal diproses.');
             return;
         }
 
         const firstHeader = allParsedData[0].header;
-        const samePeriod = allParsedData.every(data =>
-            data.header.bulan.trim().toLocaleUpperCase('id-ID') === firstHeader.bulan.trim().toLocaleUpperCase('id-ID')
-            && data.header.tahun === firstHeader.tahun
-        );
+        const samePeriod = allParsedData.every((data) => data.header.bulan.trim().toLocaleUpperCase('id-ID') === firstHeader.bulan.trim().toLocaleUpperCase('id-ID') && data.header.tahun === firstHeader.tahun);
         if (!samePeriod) {
             alert('PDF rekap hanya dapat dibuat jika semua file berasal dari bulan dan tahun yang sama.');
             return;
@@ -693,19 +698,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const payload = {
             month: firstHeader.bulan,
             year: Number(firstHeader.tahun),
-            employees: allParsedData.map(data => ({
+            employees: allParsedData.map((data) => ({
                 name: data.header.nama,
                 nip: data.header.nip,
-                records: data.records.map(record => ({
+                records: data.records.map((record) => ({
                     tanggal: record.tanggal,
                     status: record.status,
                     isWeekend: record.isWeekend,
                     jamMasuk: record.jamMasuk,
                     kodeMasuk: record.kodeMasuk,
                     jamPulang: record.jamPulang,
-                    kodePulang: record.kodePulang
-                }))
-            }))
+                    kodePulang: record.kodePulang,
+                })),
+            })),
         };
 
         btnExportPdf.disabled = true;
@@ -713,7 +718,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/export-attendance-pdf', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(payload),
             });
 
             if (!response.ok) {

@@ -452,7 +452,7 @@ async function extractAttendancePhotos(buffer, dateStr) {
             })
             .sort((first, second) => first.x - second.x)
             .map((image) => ({
-                label: image.x < picColumnSplitX ? 'Foto PIC Masuk' : 'Foto PIC Pulang',
+                label: image.x < picColumnSplitX ? 'Foto Masuk' : 'Foto Pulang',
                 dataUrl: image.dataUrl,
             }));
 

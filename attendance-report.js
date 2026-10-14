@@ -5,6 +5,8 @@ const PAGE_MARGIN = 26;
 const FIRST_COLUMN_WIDTH = 170;
 const EMPLOYEE_ROW_HEIGHT = 30;
 const FOOTER_HEIGHT = 18;
+const SIGNATURE_GAP = 14;
+const SIGNATURE_BLOCK_HEIGHT = 112;
 const MONTH_NAMES = ['JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI', 'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER'];
 
 function getAttendanceMarks(record) {
@@ -124,7 +126,7 @@ function drawPageHeader(doc, report, pageNumber, totalPages) {
             align: 'center',
         });
         y += 15;
-        doc.font('Helvetica').fontSize(7).fillColor('#333333').text('Atas: Check-in  |  Bawah: Check-out  |  TCO: Tidak Check-out  |  ALPA: Tidak melakukan absensi', PAGE_MARGIN, y, {
+        doc.font('Helvetica').fontSize(7).fillColor('#333333').text('Atas: Check-in  |  Bawah: Check-out  |  TCO: Tidak Check-out  |  ALPA: Tidak melakukan absensi  |  DL: Dinas Luar ', PAGE_MARGIN, y, {
             width: contentWidth,
             align: 'center',
         });
@@ -148,6 +150,50 @@ function drawPageFooter(doc, pageNumber, totalPages) {
         .text(`Halaman ${pageNumber} dari ${totalPages}`, PAGE_MARGIN, doc.page.height - PAGE_MARGIN - 20, {
             width: contentWidth,
             align: 'right',
+            lineBreak: false,
+        });
+}
+
+function drawSignature(doc, y, date) {
+    const width = 260;
+    const x = doc.page.width - PAGE_MARGIN - width;
+    const month = MONTH_NAMES[date.getMonth()];
+    const formattedMonth = `${month[0]}${month.slice(1).toLowerCase()}`;
+
+    doc.font('Helvetica').fontSize(8).fillColor('#111111').text(`Candra Mukti, ${date.getDate()} ${formattedMonth} ${date.getFullYear()}`, x, y, {
+        width,
+        align: 'center',
+        lineBreak: false,
+    });
+    doc.font('Helvetica')
+        .fontSize(8)
+        .text('Plt. Sekretaris Komisi Pemilihan Umum', x, y + 14, {
+            width,
+            align: 'center',
+            lineBreak: false,
+        });
+    doc.text('Kabupaten Tulang Bawang Barat', x, y + 26, {
+        width,
+        align: 'center',
+        lineBreak: false,
+    });
+    doc.text('Selaku Penyelenggara SPIP', x, y + 38, {
+        width,
+        align: 'center',
+        lineBreak: false,
+    });
+    doc.font('Helvetica-Bold')
+        .fontSize(8)
+        .text('Wahyu Ari Bowo', x, y + 87, {
+            width,
+            align: 'center',
+            lineBreak: false,
+        });
+    doc.font('Helvetica')
+        .fontSize(8)
+        .text('NIP. 19861130 201012 1 001', x, y + 99, {
+            width,
+            align: 'center',
             lineBreak: false,
         });
 }
@@ -267,6 +313,7 @@ function drawEmployeeRow(doc, employee, recordsByDay, geometry, y, dayCount) {
 
 function getMarkColor(mark) {
     if (mark === 'ALPA') return '#b91c1c';
+    if (mark === 'WFH') return '#047857';
     if (mark === 'TCO' || mark === 'TCM') return '#b45309';
     if (['SAKIT', 'CUTI', 'IZIN', 'DL'].includes(mark)) return '#6d28d9';
     return '#111827';
@@ -286,7 +333,38 @@ async function createAttendanceReport(report) {
     const availableHeight = 842 - PAGE_MARGIN * 2 - FOOTER_HEIGHT;
     const firstPageRows = Math.floor((availableHeight - 145 - 20) / EMPLOYEE_ROW_HEIGHT);
     const followingPageRows = Math.floor((availableHeight - 108 - 20) / EMPLOYEE_ROW_HEIGHT);
-    const totalPages = employees.length <= firstPageRows ? 1 : 1 + Math.ceil((employees.length - firstPageRows) / followingPageRows);
+    const lastFirstPageRows = Math.floor((availableHeight - 145 - 20 - SIGNATURE_GAP - SIGNATURE_BLOCK_HEIGHT) / EMPLOYEE_ROW_HEIGHT);
+    const lastFollowingPageRows = Math.floor((availableHeight - 108 - 20 - SIGNATURE_GAP - SIGNATURE_BLOCK_HEIGHT) / EMPLOYEE_ROW_HEIGHT);
+    const pageCapacities = [];
+
+    for (let pageCount = 1; ; pageCount++) {
+        const capacity = pageCount === 1 ? lastFirstPageRows : firstPageRows + (pageCount - 2) * followingPageRows + lastFollowingPageRows;
+        if (employees.length <= capacity) {
+            if (pageCount === 1) {
+                pageCapacities.push(lastFirstPageRows);
+            } else {
+                pageCapacities.push(firstPageRows);
+                for (let page = 1; page < pageCount - 1; page++) {
+                    pageCapacities.push(followingPageRows);
+                }
+                pageCapacities.push(lastFollowingPageRows);
+            }
+            break;
+        }
+    }
+
+    let remainingEmployees = employees.length;
+    const pageRowCounts = pageCapacities.map((capacity, index) => {
+        const pagesRemaining = pageCapacities.length - index;
+        const futureCapacity = pageCapacities.slice(index + 1).reduce((total, rows) => total + rows, 0);
+        const minimumRows = Math.max(1, remainingEmployees - futureCapacity);
+        const balancedRows = Math.ceil(remainingEmployees / pagesRemaining);
+        const rows = Math.min(capacity, Math.max(minimumRows, balancedRows));
+        remainingEmployees -= rows;
+        return rows;
+    });
+    const totalPages = pageRowCounts.length;
+    const generatedAt = new Date();
 
     const doc = new PDFDocument({
         size: 'A3',
@@ -312,14 +390,16 @@ async function createAttendanceReport(report) {
         if (pageNumber > 1) doc.addPage();
         const startY = drawPageHeader(doc, { month, year: report.year }, pageNumber, totalPages);
         const geometry = drawTableHeader(doc, report, startY, dayCount);
-        const capacity = pageNumber === 1 ? firstPageRows : followingPageRows;
-        const endIndex = Math.min(employees.length, employeeIndex + capacity);
+        const endIndex = Math.min(employees.length, employeeIndex + pageRowCounts[pageNumber - 1]);
 
         while (employeeIndex < endIndex) {
             const employee = employees[employeeIndex];
             drawEmployeeRow(doc, employee, employee.recordsByDay, geometry, geometry.nextY, dayCount);
             geometry.nextY += EMPLOYEE_ROW_HEIGHT;
             employeeIndex++;
+        }
+        if (pageNumber === totalPages) {
+            drawSignature(doc, geometry.nextY + SIGNATURE_GAP, generatedAt);
         }
         drawPageFooter(doc, pageNumber, totalPages);
         pageNumber++;
