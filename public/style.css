@@ -756,6 +756,11 @@ body {
     opacity: 0.7;
 }
 
+.holiday-note {
+    color: var(--kpu-dark);
+    font-weight: 600;
+}
+
 /* Badges */
 .badge {
     display: inline-flex;

@@ -6,6 +6,7 @@ const customParseFormat = require('dayjs/plugin/customParseFormat');
 const path = require('path');
 const fs = require('fs');
 const { createAttendanceReport } = require('./attendance-report');
+const { getHolidayForDate, getHolidaysForMonth } = require('./holiday-calendar');
 
 dayjs.extend(customParseFormat);
 
@@ -151,7 +152,8 @@ async function parseAbsensiPdf(buffer, filename = '') {
         // Strict weekend / holiday detection (Fix: Avoid matching 'mingguan' in activity descriptions)
         const isStandaloneWeekendText = /^\s*(SABTU|MINGGU)\b/i.test(block);
         const isNationalHoliday = /\bLIBUR\s+NASIONAL\b/i.test(block);
-        const isLibur = isWeekend || isStandaloneWeekendText || isNationalHoliday;
+        const holiday = getHolidayForDate(dateStr);
+        const isLibur = isWeekend || isStandaloneWeekendText || isNationalHoliday || Boolean(holiday);
 
         // Anomaly & Status keywords
         const isTidakAbsenKeyword = /TIDAK\s+MELAKUKAN\s+ABSENSI|ALPA/i.test(block);
@@ -217,7 +219,9 @@ async function parseAbsensiPdf(buffer, filename = '') {
         }
 
         if (isLibur) {
-            status = 'Libur (Akhir Pekan)';
+            status = holiday
+                ? `Libur (${holiday.name})`
+                : isNationalHoliday ? 'Libur (Libur Nasional)' : 'Libur (Akhir Pekan)';
             statusBadge = 'secondary';
         } else if (isCuti) {
             status = 'Cuti';
@@ -302,6 +306,9 @@ async function parseAbsensiPdf(buffer, filename = '') {
             uraianTugas: extractTaskDescription(block, header),
             dayOfWeek,
             isWeekend: isLibur,
+            isHoliday: Boolean(holiday),
+            holidayName: holiday?.name || null,
+            isSyntheticHoliday: false,
             isExcused,
             isCuti,
             isSakit,
@@ -330,6 +337,71 @@ async function parseAbsensiPdf(buffer, filename = '') {
         });
     }
 
+    const monthNumber = {
+        JANUARI: 1,
+        FEBRUARI: 2,
+        MARET: 3,
+        APRIL: 4,
+        MEI: 5,
+        JUNI: 6,
+        JULI: 7,
+        AGUSTUS: 8,
+        SEPTEMBER: 9,
+        OKTOBER: 10,
+        NOVEMBER: 11,
+        DESEMBER: 12,
+    }[header.bulan.trim().toLocaleUpperCase('id-ID')];
+
+    if (monthNumber && /^\d{4}$/.test(header.tahun)) {
+        for (const holiday of getHolidaysForMonth(header.tahun, monthNumber)) {
+            if (records.some((record) => record.tanggal === holiday.date)) continue;
+
+            const dateObj = dayjs(holiday.date, 'DD-MM-YYYY');
+            const dayOfWeek = dateObj.day();
+            const isFriday = dayOfWeek === 5;
+            records.push({
+                tanggal: holiday.date,
+                hari: dayNames[dayOfWeek],
+                uraianTugas: holiday.name,
+                dayOfWeek,
+                isWeekend: true,
+                isHoliday: true,
+                holidayName: holiday.name,
+                isSyntheticHoliday: true,
+                isExcused: false,
+                isCuti: false,
+                isSakit: false,
+                isDL: false,
+                isAnomaly: false,
+                isShortDuration: false,
+                jamMasuk: '-',
+                kodeMasuk: '-',
+                jamPulang: '-',
+                kodePulang: '-',
+                isLate: false,
+                lateSec: 0,
+                lateFormatted: '0m 0s',
+                stdInStr: '07:30:00',
+                stdOutStr: isFriday ? '16:30:00' : '16:00:00',
+                minOutStr: '-',
+                minOutSec: 0,
+                grossFormatted: formatDurationSimple(0),
+                breakFormatted: formatDurationSimple(0),
+                netSec: 0,
+                netFormatted: formatDurationSimple(0),
+                diffTargetSec: 0,
+                diffTargetFormatted: formatDuration(0),
+                status: `Libur (${holiday.name})`,
+                statusBadge: 'secondary',
+            });
+        }
+        records.sort((a, b) => {
+            const [dayA, monthA, yearA] = a.tanggal.split('-').map(Number);
+            const [dayB, monthB, yearB] = b.tanggal.split('-').map(Number);
+            return new Date(yearA, monthA - 1, dayA) - new Date(yearB, monthB - 1, dayB);
+        });
+    }
+
     // Summary Statistics
     const workingDays = records.filter((r) => !r.isWeekend);
     const hadirUtuhCount = workingDays.filter((r) => r.status === 'Hadir Penuh').length;
@@ -354,7 +426,9 @@ async function parseAbsensiPdf(buffer, filename = '') {
     const summary = {
         totalDays: records.length,
         totalWorkingDays: workingDays.length,
-        totalWeekendDays: records.length - workingDays.length,
+        totalWeekendDays: records.filter((record) => record.dayOfWeek === 0 || record.dayOfWeek === 6).length,
+        totalHolidayDays: records.filter((record) => record.isHoliday).length,
+        totalNonWorkingDays: records.filter((record) => record.isWeekend).length,
         hadirUtuhCount,
         jamKurangCount,
         tidakMelakukanAbsensiCount,
@@ -533,6 +607,10 @@ app.post('/api/export-attendance-pdf', async (req, res) => {
 });
 
 // Start Server
-app.listen(PORT, () => {
-    console.log(`Server Absensi Parser berjalan di http://localhost:${PORT}`);
-});
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`Server Absensi Parser berjalan di http://localhost:${PORT}`);
+    });
+}
+
+module.exports = { parseAbsensiPdf };

@@ -10,16 +10,26 @@ const SIGNATURE_BLOCK_HEIGHT = 112;
 const MONTH_NAMES = ['JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI', 'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER'];
 
 function getAttendanceMarks(record) {
+    if (record.isHoliday) {
+        return { checkIn: 'LIBUR', checkOut: 'LIBUR' };
+    }
+
     if (record.status === 'Libur (Akhir Pekan)') {
         return { checkIn: '-', checkOut: '-' };
     }
 
-    if (record.status === 'Cuti' || record.status === 'Sakit' || record.status === 'Izin') {
-        return { checkIn: record.status.toUpperCase(), checkOut: '-' };
+    if (record.status === 'Cuti') {
+        return { checkIn: record.status.toUpperCase(), checkOut: 'CUTI' };
+    }
+    if (record.status === 'Sakit') {
+        return { checkIn: record.status.toUpperCase(), checkOut: 'SAKIT' };
+    }
+    if (record.status === 'Izin') {
+        return { checkIn: record.status.toUpperCase(), checkOut: 'IZIN' };
     }
 
     if (record.status === 'Tidak Melakukan Absensi') {
-        return { checkIn: 'ALPA', checkOut: '-' };
+        return { checkIn: 'ALPA', checkOut: 'ALPA' };
     }
 
     const hasCheckIn = record.jamMasuk && record.jamMasuk !== '-';
@@ -130,7 +140,16 @@ function drawPageHeader(doc, report, pageNumber, totalPages) {
             width: contentWidth,
             align: 'center',
         });
-        y += 16;
+        y += 17;
+        if (report.holidayNotes?.length) {
+            const holidayNotes = report.holidayNotes.map(({ date, name }) => `${date}: ${name}`).join('  |  ');
+            doc.font('Helvetica').fontSize(7).fillColor('#333333').text(`Hari libur: ${holidayNotes}`, PAGE_MARGIN, y, {
+                width: contentWidth,
+                align: 'center',
+                lineBreak: false,
+            });
+            y += 10;
+        }
     } else {
         doc.font('Helvetica-Bold').fontSize(9).text(`REKAPITULASI KEHADIRAN — ${report.month.toUpperCase()} ${report.year} (LANJUTAN)`, PAGE_MARGIN, y, {
             width: contentWidth,
@@ -314,6 +333,7 @@ function drawEmployeeRow(doc, employee, recordsByDay, geometry, y, dayCount) {
 function getMarkColor(mark) {
     if (mark === 'ALPA') return '#b91c1c';
     if (mark === 'WFH') return '#047857';
+    if (mark === 'LIBUR') return '#ff0000';
     if (mark === 'TCO' || mark === 'TCM') return '#b45309';
     if (['SAKIT', 'CUTI', 'IZIN', 'DL'].includes(mark)) return '#6d28d9';
     return '#111827';
@@ -330,10 +350,12 @@ async function createAttendanceReport(report) {
         nip: employee.nip.trim(),
         recordsByDay: new Map(employee.records.map((record) => [Number(record.tanggal.slice(0, 2)), record])),
     }));
+    const holidayNotes = [...new Map(report.employees.flatMap((employee) => employee.records.filter((record) => record.isHoliday && record.holidayName).map((record) => [record.tanggal, { date: record.tanggal, name: record.holidayName }]))).values()].sort((a, b) => Number(a.date.slice(0, 2)) - Number(b.date.slice(0, 2)));
     const availableHeight = 842 - PAGE_MARGIN * 2 - FOOTER_HEIGHT;
-    const firstPageRows = Math.floor((availableHeight - 145 - 20) / EMPLOYEE_ROW_HEIGHT);
+    const firstPageHeaderExtra = holidayNotes.length > 0 ? 10 : 0;
+    const firstPageRows = Math.floor((availableHeight - 145 - 20 - firstPageHeaderExtra) / EMPLOYEE_ROW_HEIGHT);
     const followingPageRows = Math.floor((availableHeight - 108 - 20) / EMPLOYEE_ROW_HEIGHT);
-    const lastFirstPageRows = Math.floor((availableHeight - 145 - 20 - SIGNATURE_GAP - SIGNATURE_BLOCK_HEIGHT) / EMPLOYEE_ROW_HEIGHT);
+    const lastFirstPageRows = Math.floor((availableHeight - 145 - 20 - firstPageHeaderExtra - SIGNATURE_GAP - SIGNATURE_BLOCK_HEIGHT) / EMPLOYEE_ROW_HEIGHT);
     const lastFollowingPageRows = Math.floor((availableHeight - 108 - 20 - SIGNATURE_GAP - SIGNATURE_BLOCK_HEIGHT) / EMPLOYEE_ROW_HEIGHT);
     const pageCapacities = [];
 
@@ -388,7 +410,7 @@ async function createAttendanceReport(report) {
     let pageNumber = 1;
     while (employeeIndex < employees.length) {
         if (pageNumber > 1) doc.addPage();
-        const startY = drawPageHeader(doc, { month, year: report.year }, pageNumber, totalPages);
+        const startY = drawPageHeader(doc, { month, year: report.year, holidayNotes }, pageNumber, totalPages);
         const geometry = drawTableHeader(doc, report, startY, dayCount);
         const endIndex = Math.min(employees.length, employeeIndex + pageRowCounts[pageNumber - 1]);
 

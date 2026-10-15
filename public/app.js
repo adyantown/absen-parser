@@ -305,7 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
         countNoCheckout.textContent = summary.tidakCekOutMasukCount || 0;
         countLate.textContent = summary.lateDaysCount;
         countExcused.textContent = summary.izinCutiDlCount;
-        countWeekend.textContent = summary.totalWeekendDays;
+        countWeekend.textContent = summary.totalNonWorkingDays ?? summary.totalWeekendDays;
     }
 
     // Table Headers
@@ -403,6 +403,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>
                     <strong>${r.tanggal}</strong><br>
                     <small style="color: var(--text-muted);">${r.hari}</small>
+                    ${r.holidayName ? `<br><small class="holiday-note">${r.holidayName}</small>` : ''}
                 </td>
                 <td>${r.jamMasuk} ${kodeMasukBadge}</td>
                 <td>${r.jamPulang} ${kodePulangBadge}</td>
@@ -517,6 +518,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span>Tanggal & Hari:</span>
                     <span>${r.tanggal} (${r.hari})</span>
                 </div>
+                ${r.holidayName ? `
+                <div class="detail-item">
+                    <span>Keterangan Hari Libur:</span>
+                    <span>${r.holidayName}</span>
+                </div>
+                ` : ''}
                 <div class="detail-item">
                     <span>Jam Masuk Standar:</span>
                     <span>07:30:00</span>
@@ -561,12 +568,20 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         const taskDescription = document.getElementById('detailTaskDescription');
-        taskDescription.textContent = r.uraianTugas || 'Uraian tugas tidak tersedia pada PDF.';
+        taskDescription.textContent = r.isSyntheticHoliday
+            ? `Tanggal ini ditetapkan sebagai hari libur: ${r.holidayName}.`
+            : r.uraianTugas || 'Uraian tugas tidak tersedia pada PDF.';
         loadAttendancePhotos(r.tanggal, document.getElementById('detailPhotos'));
         detailModal.classList.remove('hidden');
     }
 
     async function loadAttendancePhotos(date, photoContainer) {
+        const record = allParsedData[selectedIndex].records.find((item) => item.tanggal === date);
+        if (record?.isSyntheticHoliday) {
+            photoContainer.textContent = 'Tidak ada catatan absensi pada PDF sumber untuk tanggal libur ini.';
+            return;
+        }
+
         const cacheKey = `${selectedIndex}:${date}`;
         const cachedPhotos = attendancePhotoCache.get(cacheKey);
         if (cachedPhotos) {
@@ -673,9 +688,9 @@ document.addEventListener('DOMContentLoaded', () => {
             downloadCsv(csv, `Rekapitulasi_Batch_Absensi_Pegawai.csv`);
         } else {
             const data = allParsedData[selectedIndex];
-            let csv = 'Tanggal,Hari,Jam Masuk,Kode Masuk,Jam Pulang,Kode Pulang,Keterlambatan,Jam Pulang Wajib Min,Durasi Net,Status\n';
+            let csv = 'Tanggal,Hari,Keterangan Hari Libur,Jam Masuk,Kode Masuk,Jam Pulang,Kode Pulang,Keterlambatan,Jam Pulang Wajib Min,Durasi Net,Status\n';
             data.records.forEach((r) => {
-                csv += `"${r.tanggal}","${r.hari}","${r.jamMasuk}","${r.kodeMasuk}","${r.jamPulang}","${r.kodePulang}","${r.lateFormatted}","${r.minOutStr}","${r.netFormatted}","${r.status}"\n`;
+                csv += `"${r.tanggal}","${r.hari}","${r.holidayName || ''}","${r.jamMasuk}","${r.kodeMasuk}","${r.jamPulang}","${r.kodePulang}","${r.lateFormatted}","${r.minOutStr}","${r.netFormatted}","${r.status}"\n`;
             });
             downloadCsv(csv, `Laporan_Absensi_${data.header.nama.replace(/\s+/g, '_')}_${data.header.bulan}_${data.header.tahun}.csv`);
         }
@@ -705,6 +720,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     tanggal: record.tanggal,
                     status: record.status,
                     isWeekend: record.isWeekend,
+                    isHoliday: record.isHoliday,
+                    holidayName: record.holidayName,
                     jamMasuk: record.jamMasuk,
                     kodeMasuk: record.kodeMasuk,
                     jamPulang: record.jamPulang,
