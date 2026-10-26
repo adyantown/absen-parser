@@ -32,6 +32,10 @@ const upload = multer({
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json({ limit: '5mb' }));
 
+app.get('/api/health', (req, res) => {
+    res.json({ success: true });
+});
+
 // Helper Functions
 function timeToSeconds(timeStr) {
     if (!timeStr) return 0;
@@ -606,6 +610,21 @@ app.post('/api/export-attendance-pdf', async (req, res) => {
     }
 });
 
+app.use((err, req, res, next) => {
+    console.error(`Unhandled request error at ${req.method} ${req.originalUrl}:`, err);
+    if (res.headersSent) {
+        return next(err);
+    }
+
+    const statusCode = err.statusCode || err.status || 500;
+    const message = statusCode === 413
+        ? 'Ukuran request melebihi batas yang diizinkan.'
+        : statusCode < 500
+            ? err.message
+            : 'Terjadi kesalahan saat memproses permintaan.';
+    return res.status(statusCode).json({ success: false, error: message });
+});
+
 // Start Server
 if (require.main === module) {
     app.listen(PORT, () => {
@@ -613,4 +632,5 @@ if (require.main === module) {
     });
 }
 
-module.exports = { parseAbsensiPdf };
+module.exports = app;
+module.exports.parseAbsensiPdf = parseAbsensiPdf;

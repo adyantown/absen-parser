@@ -43,6 +43,20 @@ node server.js
 
 Secara default aplikasi berjalan di `http://localhost:3000`. Port dapat diubah dengan mengatur variabel lingkungan `PORT`.
 
+## Deploy ke Vercel
+
+Repository ini mengekspor aplikasi Express dari `server.js`, yang digunakan Vercel sebagai satu Function. Berkas statis tetap berada di `public/`; konfigurasi [`vercel.json`](./vercel.json) menyertakan logo KPU ke dalam Function agar ekspor PDF dapat menemukan kopnya dan memberi batas waktu eksekusi 60 detik.
+
+Untuk deploy, impor repository melalui Vercel atau jalankan:
+
+```bash
+npx vercel
+```
+
+Endpoint `/api/health` dapat digunakan untuk pemeriksaan dasar setelah deployment. Vercel menyajikan frontend dan berkas statis dari `public/` melalui CDN; `express.static()` hanya diperlukan untuk menjalankan aplikasi secara lokal.
+
+Perhatikan batas ukuran request dan durasi Function Vercel saat mengunggah PDF batch. Jika ukuran total unggahan melewati batas platform, unggahan perlu dibagi menjadi beberapa batch atau aplikasi perlu menggunakan penyimpanan berkas eksternal.
+
 ## Menjalankan tes
 
 ```bash
