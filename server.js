@@ -32,6 +32,17 @@ const upload = multer({
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json({ limit: '5mb' }));
 
+// Normalize URL if rewritten by Vercel serverless function
+app.use((req, res, next) => {
+    if (req.url && req.url.startsWith('/api/index')) {
+        const original = req.headers['x-matched-path'] || req.originalUrl;
+        if (original && !original.startsWith('/api/index')) {
+            req.url = original;
+        }
+    }
+    next();
+});
+
 app.get('/api/health', (req, res) => {
     res.json({ success: true });
 });
