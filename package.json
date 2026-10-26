@@ -12,6 +12,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@napi-rs/canvas": "0.1.80",
     "dayjs": "^1.11.23",
     "express": "^5.2.1",
     "multer": "^2.4.0",

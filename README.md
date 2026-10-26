@@ -45,7 +45,7 @@ Secara default aplikasi berjalan di `http://localhost:3000`. Port dapat diubah d
 
 ## Deploy ke Vercel
 
-Repository ini menyediakan entry point Function di `api/index.js` yang meneruskan request ke aplikasi Express `server.js`. Berkas statis tetap berada di `public/`; konfigurasi [`vercel.json`](./vercel.json) mengatur `rewrites` untuk rute API, menyertakan logo KPU dan data font PDFKit ke dalam Function agar ekspor PDF berjalan lancar, serta memberi batas waktu eksekusi 60 detik.
+Repository ini menyediakan entry point Function di `api/index.js` yang meneruskan request ke aplikasi Express `server.js`. Berkas statis tetap berada di `public/`; konfigurasi [`vercel.json`](./vercel.json) mengatur `rewrites` untuk rute API, menyertakan logo KPU, data font PDFKit, dan package `@napi-rs/canvas` yang dibutuhkan `pdf-parse` ke dalam Function, serta memberi batas waktu eksekusi 60 detik.
 
 Untuk deploy, impor repository melalui Vercel atau jalankan:
 
