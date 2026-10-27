@@ -622,12 +622,20 @@ app.post('/api/export-attendance-pdf', async (req, res) => {
 });
 
 app.use((err, req, res, next) => {
-    console.error(`Unhandled request error at ${req.method} ${req.originalUrl}:`, err);
     if (res.headersSent) {
         return next(err);
     }
 
     const statusCode = err.statusCode || err.status || 500;
+    if (err.type === 'entity.parse.failed') {
+        console.error(`Invalid JSON payload at ${req.method} ${req.originalUrl} (${err.body?.length || 0} characters).`);
+        return res.status(400).json({
+            success: false,
+            error: 'Format data permintaan tidak valid. Silakan coba ekspor kembali.',
+        });
+    }
+
+    console.error(`Unhandled request error at ${req.method} ${req.originalUrl}: ${err.message}`);
     const message = statusCode === 413
         ? 'Ukuran request melebihi batas yang diizinkan.'
         : statusCode < 500

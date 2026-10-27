@@ -698,13 +698,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     btnExportPdf.addEventListener('click', async () => {
         if (allParsedData.length === 0) return;
-        if (allParsedData.some((data) => data.error)) {
+        const exportData = viewMode === 'batch_rekap'
+            ? allParsedData
+            : [allParsedData[selectedIndex]];
+        if (exportData.some((data) => !data || data.error)) {
             alert('PDF tidak dapat dibuat karena ada file absensi yang gagal diproses.');
             return;
         }
 
-        const firstHeader = allParsedData[0].header;
-        const samePeriod = allParsedData.every((data) => data.header.bulan.trim().toLocaleUpperCase('id-ID') === firstHeader.bulan.trim().toLocaleUpperCase('id-ID') && data.header.tahun === firstHeader.tahun);
+        const firstHeader = exportData[0].header;
+        const samePeriod = exportData.every((data) => data.header.bulan.trim().toLocaleUpperCase('id-ID') === firstHeader.bulan.trim().toLocaleUpperCase('id-ID') && data.header.tahun === firstHeader.tahun);
         if (!samePeriod) {
             alert('PDF rekap hanya dapat dibuat jika semua file berasal dari bulan dan tahun yang sama.');
             return;
@@ -713,13 +716,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const payload = {
             month: firstHeader.bulan,
             year: Number(firstHeader.tahun),
-            employees: allParsedData.map((data) => ({
+            employees: exportData.map((data) => ({
                 name: data.header.nama,
                 nip: data.header.nip,
                 records: data.records.map((record) => ({
                     tanggal: record.tanggal,
                     status: record.status,
-                    isWeekend: record.isWeekend,
                     isHoliday: record.isHoliday,
                     holidayName: record.holidayName,
                     jamMasuk: record.jamMasuk,
@@ -739,15 +741,24 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (!response.ok) {
-                const result = await response.json();
-                throw new Error(result.error || 'Gagal membuat PDF rekap absensi.');
+                const responseText = await response.text();
+                let message = 'Gagal membuat PDF rekap absensi.';
+                try {
+                    const result = JSON.parse(responseText);
+                    message = result.error || message;
+                } catch {
+                    if (responseText) message = responseText;
+                }
+                throw new Error(message);
             }
 
             const pdfBlob = await response.blob();
             const downloadUrl = URL.createObjectURL(pdfBlob);
             const link = document.createElement('a');
             link.href = downloadUrl;
-            link.download = `Rekap_Absensi_${firstHeader.bulan}_${firstHeader.tahun}.pdf`;
+            link.download = viewMode === 'batch_rekap'
+                ? `Rekap_Absensi_${firstHeader.bulan}_${firstHeader.tahun}.pdf`
+                : `Rekap_Absensi_${firstHeader.nama.replace(/\s+/g, '_')}_${firstHeader.bulan}_${firstHeader.tahun}.pdf`;
             link.click();
             setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
         } catch (error) {

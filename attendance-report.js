@@ -176,8 +176,38 @@ function drawPageFooter(doc, pageNumber, totalPages) {
 function drawSignature(doc, y, date) {
     const width = 260;
     const x = doc.page.width - PAGE_MARGIN - width;
+    const leftX = PAGE_MARGIN;
     const month = MONTH_NAMES[date.getMonth()];
     const formattedMonth = `${month[0]}${month.slice(1).toLowerCase()}`;
+
+    doc.font('Helvetica').fontSize(8).fillColor('#111111')
+        .text('Mengetahui,', leftX, y + 14, {
+            width,
+            align: 'center',
+            lineBreak: false,
+        });
+    doc.text('Plt. Sekretaris Komisi Pemilihan Umum', leftX, y + 26, {
+        width,
+        align: 'center',
+        lineBreak: false,
+    });
+    doc.text('Kabupaten Tulang Bawang Barat', leftX, y + 38, {
+        width,
+        align: 'center',
+        lineBreak: false,
+    });
+    doc.font('Helvetica-Bold').fontSize(8)
+        .text('Wahyu Ari Bowo', leftX, y + 87, {
+            width,
+            align: 'center',
+            lineBreak: false,
+        });
+    doc.font('Helvetica').fontSize(8)
+        .text('NIP. 19861130 201012 1 001', leftX, y + 99, {
+            width,
+            align: 'center',
+            lineBreak: false,
+        });
 
     doc.font('Helvetica').fontSize(8).fillColor('#111111').text(`Candra Mukti, ${date.getDate()} ${formattedMonth} ${date.getFullYear()}`, x, y, {
         width,
